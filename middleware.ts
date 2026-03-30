@@ -1,33 +1,37 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+ 
 export function middleware(request: NextRequest) {
-  const basicAuth = request.headers.get('authorization');
   const url = request.nextUrl;
 
-  // القفل هيطبق بس على روابط الداش بورد
+  // حماية الداش بورد فقط
   if (url.pathname.startsWith('/dashboard')) {
-    if (basicAuth) {
-      const authValue = basicAuth.split(' ')[1];
-      const [user, pwd] = atob(authValue).split(':');
+    const authHeader = request.headers.get('authorization');
 
-      if (user === 'admin' && pwd === '123456') {
-        return NextResponse.next();
-      }
+    if (!authHeader) {
+      return new NextResponse('Auth Required', {
+        status: 401,
+        headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' },
+      });
     }
 
-    return new NextResponse('Unauthorized', {
+    const auth = atob(authHeader.split(' ')[1]);
+    const [user, pwd] = auth.split(':');
+
+    if (user === 'admin' && pwd === '123456') {
+      return NextResponse.next();
+    }
+
+    return new NextResponse('Invalid Credentials', {
       status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Secure Dashboard"',
-      },
+      headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' },
     });
   }
 
   return NextResponse.next();
 }
 
-// الماتشر ده هو اللي بيعرف فيرسل يطبق الكود فين
+// الماتشر ده هو "المخبر" اللي بيراقب الروابط
 export const config = {
   matcher: ['/dashboard/:path*'],
-};
+}
