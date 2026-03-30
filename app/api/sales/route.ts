@@ -1,85 +1,50 @@
-import { NextRequest } from 'next/server'
-import { connectDB } from '@/lib/db'
+import { NextResponse } from 'next/server'
+import { connectDB as dbConnect } from '@/lib/db'
 import Sale from '@/models/Sale'
 import Product from '@/models/Product'
 
-/** Shared error response for any DB failure */
-function dbError(detail?: string) {
-  return Response.json(
-    {
-      success: false,
-      message: 'تعذر الاتصال بقاعدة البيانات. يرجى التأكد من تشغيل الخادم.',
-      ...(detail ? { detail } : {}),
-    },
-    { status: 503 }
-  )
-}
-
-/* ── GET /api/sales ─────────────────────────────────────────── */
 export async function GET() {
   try {
-    await connectDB()
+    await dbConnect()
     const sales = await Sale.find({}).sort({ createdAt: -1 }).lean()
-    return Response.json({ success: true, sales })
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[GET /api/sales]', msg)
-    return dbError(msg)
+    return NextResponse.json({ success: true, sales })
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
 
-/* ── POST /api/sales ────────────────────────────────────────── */
-export async function POST(request: NextRequest) {
+export async function POST(req: Request) {
   try {
-    await connectDB()
-    const body = await request.json()
-
-    const { customer, phone, date, productId, productName, price, qty } = body
-
-    if (!customer || !phone || !date || !productId || !price || !qty) {
-      return Response.json(
-        { success: false, message: 'حقول مطلوبة: customer, phone, date, productId, price, qty' },
-        { status: 400 }
-      )
-    }
-
-    const quantity  = Number(qty)
-    const unitPrice = Number(price)
-
-    // 1️⃣  Verify product exists and has enough stock
-    const product = await Product.findById(productId)
+    await dbConnect()
+    const body = await req.json()
+    
+    // Fetch product to get cost
+    const product = await Product.findById(body.productId)
     if (!product) {
-      return Response.json(
-        { success: false, message: 'المنتج غير موجود' },
-        { status: 404 }
-      )
-    }
-    if (product.stock < quantity) {
-      return Response.json(
-        { success: false, message: `الكمية المطلوبة (${quantity}) تتجاوز المخزون المتاح (${product.stock})` },
-        { status: 409 }
-      )
+      return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 })
     }
 
-    // 2️⃣  Create the sale record
+    // Calculate financials
+    const costAtSale = product.costPrice || 0
+    const actualSalePrice = body.actualSalePrice || product.price
+    const discount = product.price - actualSalePrice
+
+    // Create Sale
     const sale = await Sale.create({
-      customer:    String(customer).trim(),
-      phone:       String(phone).trim(),
-      date:        String(date),
-      productId,
-      productName: productName ?? product.name,
-      price:       unitPrice,
-      qty:         quantity,
-      total:       unitPrice * quantity,
+      ...body,
+      productName: product.name,
+      price: product.price,
+      costAtSale,
+      actualSalePrice,
+      discount
     })
 
-    // 3️⃣  Atomically decrement the product stock
-    await Product.findByIdAndUpdate(productId, { $inc: { stock: -quantity } })
+    // Decrease Inventory
+    product.stock -= (body.qty || 1)
+    await product.save()
 
-    return Response.json({ success: true, sale }, { status: 201 })
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[POST /api/sales]', msg)
-    return dbError(msg)
+    return NextResponse.json({ success: true, sale }, { status: 201 })
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

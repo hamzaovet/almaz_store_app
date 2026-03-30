@@ -17,6 +17,8 @@ type ApiSale = {
   _id: string
   productName: string
   price: number
+  actualSalePrice?: number
+  costAtSale?: number
   qty: number
   total: number
 }
@@ -32,6 +34,7 @@ type ProductStat = {
 export default function ReportsPage() {
   const [products, setProducts]     = useState<ApiProduct[]>([])
   const [sales, setSales]           = useState<ApiSale[]>([])
+  const [stats, setStats]           = useState<any>(null)
   const [loading, setLoading]       = useState(true)
   const [mounted, setMounted]       = useState(false)
   const [lastRefresh, setLastRefresh] = useState(new Date())
@@ -40,13 +43,15 @@ export default function ReportsPage() {
   async function fetchAll() {
     setLoading(true)
     try {
-      const [pRes, sRes] = await Promise.all([
+      const [pRes, sRes, stRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/sales'),
+        fetch('/api/stats'),
       ])
-      const [pData, sData] = await Promise.all([pRes.json(), sRes.json()])
+      const [pData, sData, stData] = await Promise.all([pRes.json(), sRes.json(), stRes.json()])
       setProducts(pData.products ?? [])
       setSales(sData.sales ?? [])
+      setStats(stData.stats ?? null)
       setLastRefresh(new Date())
     } catch (err) {
       console.error('[Reports] fetch error', err)
@@ -61,7 +66,9 @@ export default function ReportsPage() {
   }, [])
 
   /* ── Derived stats (computed from real data) ──────────────── */
-  const totalRevenue = sales.reduce((s, e) => s + (e.total ?? e.price * e.qty), 0)
+  const totalRevenue = stats?.totalRevenue ?? 0
+  const totalCost    = stats?.totalCost ?? 0
+  const netProfit    = stats?.netProfit ?? 0
   const totalUnits   = sales.reduce((s, e) => s + e.qty, 0)
   const lowStock     = products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD)
 
@@ -78,7 +85,7 @@ export default function ReportsPage() {
         name:      s.productName,
         category:  product?.category ?? '—',
         unitsSold: s.qty,
-        revenue:   s.total ?? s.price * s.qty,
+        revenue:   s.total ?? s.actualSalePrice ? s.actualSalePrice! * s.qty : s.price * s.qty,
         stock:     product?.stock ?? 0,
       })
     }
@@ -127,10 +134,10 @@ export default function ReportsPage() {
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
 
-            {/* إجمالي الإيرادات */}
+            {/* إجمالي المبيعات الفعلي */}
             <div style={{ ...card, background: 'linear-gradient(135deg, #0a0a0c, #1a1206)', border: '1px solid rgba(212,175,55,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>إجمالي الإيرادات</p>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>إجمالي المبيعات (سعر البيع الفعلي)</p>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(212,175,55,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <TrendingUp size={18} color="#D4AF37" strokeWidth={2} />
                 </div>
@@ -141,18 +148,18 @@ export default function ReportsPage() {
               <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.25rem' }}>ج.م إجمالي</p>
             </div>
 
-            {/* إجمالي المبيعات */}
+            {/* إجمالي التكلفة */}
             <div style={{ ...card, background: 'linear-gradient(135deg, #0f0c2e, #1a1650)', border: '1px solid rgba(99,102,241,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>إجمالي المبيعات</p>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>إجمالي التكلفة (سعر الشراء)</p>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ShoppingBag size={18} color="#818cf8" strokeWidth={2} />
                 </div>
               </div>
               <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#818cf8', direction: 'ltr', letterSpacing: '-0.02em' }}>
-                {totalUnits.toLocaleString('ar-EG')}
+                {totalCost.toLocaleString('ar-EG')}
               </p>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.25rem' }}>وحدة مباعة</p>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.25rem' }}>ج.م مباع</p>
             </div>
 
             {/* تنبيهات المخزون */}
@@ -171,18 +178,18 @@ export default function ReportsPage() {
               </p>
             </div>
 
-            {/* متوسط قيمة الوحدة */}
+            {/* صافي الأرباح */}
             <div style={card}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(29,29,31,0.5)', letterSpacing: '0.05em' }}>متوسط قيمة الطلب</p>
+                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(29,29,31,0.5)', letterSpacing: '0.05em' }}>صافي الأرباح</p>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <BarChart3 size={18} color="#22c55e" strokeWidth={2} />
                 </div>
               </div>
               <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#16a34a', direction: 'ltr', letterSpacing: '-0.02em' }}>
-                {totalUnits > 0 ? Math.round(totalRevenue / totalUnits).toLocaleString('ar-EG') : 0}
+                {netProfit.toLocaleString('ar-EG')}
               </p>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(29,29,31,0.4)', marginTop: '0.25rem' }}>ج.م / وحدة</p>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(29,29,31,0.4)', marginTop: '0.25rem' }}>الإيراد - التكلفة - المصروفات</p>
             </div>
           </div>
 

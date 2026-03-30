@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, AlertCircle, Plus, Loader2 } from 'lucide-react'
+import { TrendingUp, AlertCircle, Plus, Loader2, Banknote, X } from 'lucide-react'
 
 type ApiProduct = {
   _id: string
@@ -18,6 +18,7 @@ type Sale = {
   date: string
   productName: string
   price: number
+  actualSalePrice?: number
   qty: number
   total: number
 }
@@ -35,8 +36,13 @@ export default function SalesPage() {
     phone:     '',
     date:      new Date().toISOString().split('T')[0],
     productId: '',
+    actualSalePrice: '',
     qty:       '1',
   })
+
+  const [expenseModal, setExpenseModal] = useState(false)
+  const [expenseForm, setExpenseForm]   = useState({ title: '', amount: '' })
+  const [savingExpense, setSavingExpense] = useState(false)
 
   /* ── Data fetching ──────────────────────────────────────── */
   useEffect(() => { fetchSales();  fetchProducts() }, [])
@@ -62,7 +68,7 @@ export default function SalesPage() {
       const list: ApiProduct[] = data.products ?? []
       setProducts(list)
       // Pre-select first product
-      if (list.length > 0) setForm((f) => ({ ...f, productId: list[0]._id }))
+      if (list.length > 0) setForm((f) => ({ ...f, productId: list[0]._id, actualSalePrice: String(list[0].price) }))
     } catch {
       showToast('فشل تحميل المنتجات', 'err')
     } finally {
@@ -82,7 +88,7 @@ export default function SalesPage() {
   /* ── Submit sale → POST /api/sales ──────────────────────── */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.customer || !selectedProduct) return
+    if (!form.customer || !selectedProduct || !form.actualSalePrice) return
     setSubmitting(true)
     try {
       const res  = await fetch('/api/sales', {
@@ -95,15 +101,16 @@ export default function SalesPage() {
           productId:   selectedProduct._id,
           productName: selectedProduct.name,
           price:       selectedProduct.price,
+          actualSalePrice: form.actualSalePrice,
           qty:         Number(form.qty),
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) throw new Error(data.error || data.message)
 
       // Prepend new sale & reset form
       setSales((prev) => [data.sale, ...prev])
-      setForm({ customer: '', phone: '', date: new Date().toISOString().split('T')[0], productId: products[0]?._id ?? '', qty: '1' })
+      setForm({ customer: '', phone: '', date: new Date().toISOString().split('T')[0], productId: products[0]?._id ?? '', actualSalePrice: products[0] ? String(products[0].price) : '', qty: '1' })
 
       // Reflect stock decrement locally so the preview stays accurate
       setProducts((prev) =>
@@ -118,6 +125,29 @@ export default function SalesPage() {
       showToast(err instanceof Error ? err.message : 'حدث خطأ', 'err')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  /* ── Submit Expense → POST /api/expenses ────────────────── */
+  async function handleExpenseSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!expenseForm.title || !expenseForm.amount) return
+    setSavingExpense(true)
+    try {
+      const res = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expenseForm)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      showToast('تم تسجيل المصروف بنجاح ✓', 'ok')
+      setExpenseModal(false)
+      setExpenseForm({ title: '', amount: '' })
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'حدث خطأ', 'err')
+    } finally {
+      setSavingExpense(false)
     }
   }
 
@@ -147,12 +177,18 @@ export default function SalesPage() {
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.3rem' }}>إدارة المبيعات</p>
-        <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#1D1D1F' }}>سجل المبيعات</h1>
-        <p style={{ color: 'rgba(29,29,31,0.5)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
-          تسجيل البيع يخصم الكمية تلقائياً من المخزون
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+        <div>
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.3rem' }}>إدارة المبيعات والمصروفات</p>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#1D1D1F' }}>سجل العمليات</h1>
+          <p style={{ color: 'rgba(29,29,31,0.5)', fontSize: '0.88rem', marginTop: '0.2rem' }}>
+            تسجيل البيع يخصم الكمية تلقائياً من المخزون
+          </p>
+        </div>
+        <button onClick={() => setExpenseModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 12, padding: '0.72rem 1.4rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 18px rgba(239, 68, 68, 0.25)' }}>
+          <Banknote size={18} strokeWidth={2.5} />
+          إضافة مصروف
+        </button>
       </div>
 
       {/* KPIs — derived from real sales state */}
@@ -185,7 +221,6 @@ export default function SalesPage() {
               { label: 'اسم العميل', key: 'customer', type: 'text',   placeholder: 'أحمد محمد' },
               { label: 'رقم الهاتف', key: 'phone',    type: 'tel',    placeholder: '010xxxxxxxx' },
               { label: 'التاريخ',    key: 'date',     type: 'date',   placeholder: '' },
-              { label: 'الكمية',     key: 'qty',      type: 'number', placeholder: '1' },
             ].map((f) => (
               <div key={f.key}>
                 <label style={lbl}>{f.label}</label>
@@ -194,7 +229,6 @@ export default function SalesPage() {
                   type={f.type}
                   placeholder={f.placeholder}
                   value={form[f.key as keyof typeof form]}
-                  min={f.key === 'qty' ? 1 : undefined}
                   onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                   style={inp}
                 />
@@ -213,14 +247,46 @@ export default function SalesPage() {
                   لا توجد منتجات — أضف منتجاً أولاً
                 </div>
               ) : (
-                <select value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} style={inp}>
+                <select 
+                  value={form.productId} 
+                  onChange={(e) => {
+                    const p = products.find(prod => prod._id === e.target.value);
+                    setForm({ ...form, productId: e.target.value, actualSalePrice: p ? String(p.price) : '' })
+                  }} 
+                  style={inp}
+                >
                   {products.map((p) => (
                     <option key={p._id} value={p._id}>
-                      {p.name} — {p.price.toLocaleString('ar-EG')} ج.م
+                      {p.name} — السعر الأصلي: {p.price.toLocaleString('ar-EG')} ج.م
                     </option>
                   ))}
                 </select>
               )}
+            </div>
+
+            <div>
+              <label style={lbl}>سعر البيع الفعلي (ج.م)</label>
+              <input
+                required
+                type="number"
+                placeholder="0"
+                value={form.actualSalePrice}
+                onChange={(e) => setForm({ ...form, actualSalePrice: e.target.value })}
+                style={inp}
+              />
+            </div>
+
+            <div>
+              <label style={lbl}>الكمية</label>
+              <input
+                required
+                type="number"
+                min="1"
+                placeholder="1"
+                value={form.qty}
+                onChange={(e) => setForm({ ...form, qty: e.target.value })}
+                style={inp}
+              />
             </div>
 
             {/* Stock impact preview */}
@@ -265,7 +331,7 @@ export default function SalesPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid rgba(212,175,55,0.12)' }}>
-                  {['العميل', 'الهاتف', 'المنتج', 'القيمة', 'الكمية', 'التاريخ'].map((h) => (
+                  {['العميل', 'الهاتف', 'المنتج', 'سعر البيع', 'الكمية', 'التاريخ'].map((h) => (
                     <th key={h} style={{ padding: '0.7rem 0.85rem', textAlign: 'right', fontWeight: 700, color: 'rgba(29,29,31,0.45)', fontSize: '0.74rem', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -279,7 +345,7 @@ export default function SalesPage() {
                     <td style={{ padding: '0.85rem', color: 'rgba(29,29,31,0.55)', direction: 'ltr', textAlign: 'right' }}>{s.phone}</td>
                     <td style={{ padding: '0.85rem', color: 'rgba(29,29,31,0.7)' }}>{s.productName}</td>
                     <td style={{ padding: '0.85rem', fontWeight: 700, color: '#D4AF37', direction: 'ltr', whiteSpace: 'nowrap' }}>
-                      {(s.total ?? s.price * s.qty).toLocaleString('ar-EG')} ج.م
+                      {(s.total ?? (s.actualSalePrice ? s.actualSalePrice * s.qty : s.price * s.qty)).toLocaleString('ar-EG')} ج.م
                     </td>
                     <td style={{ padding: '0.85rem', color: 'rgba(29,29,31,0.6)', textAlign: 'center' }}>{s.qty}</td>
                     <td style={{ padding: '0.85rem', color: 'rgba(29,29,31,0.45)', direction: 'ltr', whiteSpace: 'nowrap' }}>{s.date}</td>
@@ -290,6 +356,59 @@ export default function SalesPage() {
           )}
         </div>
       </div>
+
+      {/* Expense Modal */}
+      {expenseModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setExpenseModal(false) }}
+        >
+          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 400, padding: '2rem', boxShadow: '0 32px 80px rgba(0,0,0,0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontWeight: 900, fontSize: '1.2rem', color: '#1D1D1F' }}>إضافة مصروف جديد</h2>
+              <button onClick={() => setExpenseModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1D1D1F' }}><X size={22} /></button>
+            </div>
+            
+            <form onSubmit={handleExpenseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={lbl}>عنوان المصروف</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="مثال: فاتورة كهرباء، أدوات تغليف، شحن..."
+                  value={expenseForm.title}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
+                  style={inp}
+                />
+              </div>
+              <div>
+                <label style={lbl}>قيمة المصروف (ج.م)</label>
+                <input
+                  required
+                  type="number"
+                  placeholder="0"
+                  min="0"
+                  value={expenseForm.amount}
+                  onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                  style={inp}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button
+                  type="submit"
+                  disabled={savingExpense}
+                  style={{ flex: 1, background: '#ef4444', color: '#fff', border: 'none', borderRadius: 12, padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: savingExpense ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: savingExpense ? 0.75 : 1 }}
+                >
+                  {savingExpense
+                    ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> جاري الحفظ…</>
+                    : 'حفظ المصروف'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>

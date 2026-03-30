@@ -1,10 +1,10 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Product from '@/models/Product'
 
 /** Shared error response for any DB failure */
 function dbError(detail?: string) {
-  return Response.json(
+  return NextResponse.json(
     {
       success: false,
       message: 'تعذر الاتصال بقاعدة البيانات. يرجى التأكد من تشغيل الخادم.',
@@ -15,11 +15,17 @@ function dbError(detail?: string) {
 }
 
 /* ── GET /api/products ─────────────────────────────────────── */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await connectDB()
-    const products = await Product.find({}).sort({ createdAt: -1 }).lean()
-    return Response.json({ success: true, products })
+    const isAdmin = request.cookies.has('almaz_auth')
+    
+    // Build query. Hide costPrice if not an admin.
+    const query = Product.find({}).sort({ createdAt: -1 })
+    if (!isAdmin) query.select('-costPrice')
+    
+    const products = await query.lean()
+    return NextResponse.json({ success: true, products })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[GET /api/products]', msg)
@@ -33,9 +39,9 @@ export async function POST(request: NextRequest) {
     await connectDB()
     const body = await request.json()
 
-    const { name, category, price, stock } = body
+    const { name, category, price, stock, costPrice } = body
     if (!name || !category || price == null || stock == null) {
-      return Response.json(
+      return NextResponse.json(
         { success: false, message: 'الحقول المطلوبة: name, category, price, stock' },
         { status: 400 }
       )
@@ -45,13 +51,14 @@ export async function POST(request: NextRequest) {
       name:     String(name).trim(),
       category: String(category).trim(),
       price:    Number(price),
+      costPrice:costPrice != null ? Number(costPrice) : 0,
       stock:    Number(stock),
       specs:    body.specs    ? String(body.specs).trim()    : undefined,
       imageUrl: body.imageUrl ? String(body.imageUrl).trim() : undefined,
       badge:    body.badge    ? String(body.badge).trim()    : undefined,
     })
 
-    return Response.json({ success: true, product }, { status: 201 })
+    return NextResponse.json({ success: true, product }, { status: 201 })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[POST /api/products]', msg)
@@ -65,14 +72,14 @@ export async function DELETE(request: NextRequest) {
     await connectDB()
     const id = request.nextUrl.searchParams.get('id')
     if (!id) {
-      return Response.json(
+      return NextResponse.json(
         { success: false, message: 'معرّف المنتج (id) مطلوب' },
         { status: 400 }
       )
     }
 
     await Product.findByIdAndDelete(id)
-    return Response.json({ success: true })
+    return NextResponse.json({ success: true })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[DELETE /api/products]', msg)
@@ -91,7 +98,7 @@ export async function PUT(request: Request) {
     const targetId = _id || id
 
     if (!targetId) {
-      return Response.json(
+      return NextResponse.json(
         { success: false, message: 'Missing product ID' },
         { status: 400 }
       )
@@ -108,16 +115,16 @@ export async function PUT(request: Request) {
     )
 
     if (!updatedProduct) {
-      return Response.json(
+      return NextResponse.json(
         { success: false, message: 'Product not found' },
         { status: 404 }
       )
     }
 
-    return Response.json({ success: true, data: updatedProduct })
+    return NextResponse.json({ success: true, data: updatedProduct })
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[PUT /api/products]', msg)
-    return Response.json({ success: false, message: msg }, { status: 500 })
+    return NextResponse.json({ success: false, message: msg }, { status: 500 })
   }
 }

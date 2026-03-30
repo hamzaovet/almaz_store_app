@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
-  TrendingUp, ShoppingCart, Users, Package,
+  TrendingUp, ShoppingCart, Users, Package, Wallet, Banknote, FileText, Archive,
   Loader2, Link as LinkIcon,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -64,6 +64,7 @@ function SkeletonCard() {
 export default function DashboardPage() {
   const [products, setProducts] = useState<ApiProduct[]>([])
   const [sales, setSales]       = useState<ApiSale[]>([])
+  const [statsData, setStatsData] = useState<any>(null)
   const [loading, setLoading]   = useState(true)
   const [mounted, setMounted]   = useState(false)
   const [today, setToday]       = useState('')
@@ -81,13 +82,15 @@ export default function DashboardPage() {
   async function fetchAll() {
     setLoading(true)
     try {
-      const [pRes, sRes] = await Promise.all([
+      const [pRes, sRes, stRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/sales'),
+        fetch('/api/stats'),
       ])
-      const [pData, sData] = await Promise.all([pRes.json(), sRes.json()])
+      const [pData, sData, stData] = await Promise.all([pRes.json(), sRes.json(), stRes.json()])
       setProducts(pData.products ?? [])
       setSales(sData.sales ?? [])
+      setStatsData(stData.stats ?? null)
     } catch (err) {
       console.error('[Dashboard] fetch error', err)
     } finally {
@@ -95,49 +98,52 @@ export default function DashboardPage() {
     }
   }
 
-  /* ── Derived stats from real data ────────────────────── */
-  const totalRevenue   = sales.reduce((s, e) => s + (e.total ?? e.price * e.qty), 0)
-  const totalOrders    = sales.length
-  const totalProducts  = products.length
-  // Unique customers by phone number
-  const uniqueCustomers = new Set(sales.map((s) => s.phone)).size
-
+  /* ── Derived stats from API stats endpoint ────────────── */
   const stats = [
     {
       id: 'revenue',
-      label: 'إجمالي الإيرادات',
-      value: loading ? '—' : totalRevenue.toLocaleString('ar-EG'),
+      label: 'إجمالي المبيعات',
+      value: loading || !statsData ? '—' : statsData.totalRevenue.toLocaleString('ar-EG'),
       unit: 'ج.م',
       icon: TrendingUp,
       color: '#D4AF37',
       bg: 'rgba(212,175,55,0.08)',
     },
     {
-      id: 'orders',
-      label: 'إجمالي المبيعات',
-      value: loading ? '—' : String(totalOrders),
-      unit: 'عملية',
-      icon: ShoppingCart,
-      color: '#6366f1',
-      bg: 'rgba(99,102,241,0.08)',
+      id: 'costs',
+      label: 'إجمالي التكلفة',
+      value: loading || !statsData ? '—' : statsData.totalCost.toLocaleString('ar-EG'),
+      unit: 'ج.م',
+      icon: Package,
+      color: '#F97316',
+      bg: 'rgba(249,115,22,0.08)',
     },
     {
-      id: 'customers',
-      label: 'العملاء (فريد)',
-      value: loading ? '—' : String(uniqueCustomers),
-      unit: 'عميل',
-      icon: Users,
+      id: 'expenses',
+      label: 'إجمالي المصروفات',
+      value: loading || !statsData ? '—' : statsData.totalExpenses.toLocaleString('ar-EG'),
+      unit: 'ج.م',
+      icon: FileText,
+      color: '#ef4444',
+      bg: 'rgba(239,68,68,0.08)',
+    },
+    {
+      id: 'profit',
+      label: 'صافي الربح',
+      value: loading || !statsData ? '—' : statsData.netProfit.toLocaleString('ar-EG'),
+      unit: 'ج.م',
+      icon: Banknote,
       color: '#22c55e',
       bg: 'rgba(34,197,94,0.08)',
     },
     {
-      id: 'products',
-      label: 'المنتجات المتاحة',
-      value: loading ? '—' : String(totalProducts),
-      unit: 'منتج',
-      icon: Package,
-      color: '#F97316',
-      bg: 'rgba(249,115,22,0.08)',
+      id: 'inventory-value',
+      label: 'قيمة المخزون الحالي',
+      value: loading || !statsData ? '—' : statsData.totalInventoryValue.toLocaleString('ar-EG'),
+      unit: 'ج.م',
+      icon: Archive,
+      color: '#6366f1',
+      bg: 'rgba(99,102,241,0.08)',
     },
   ]
 
@@ -162,7 +168,7 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
         {loading
-          ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
           : stats.map((s, i) => {
               const Icon = s.icon
               return (
