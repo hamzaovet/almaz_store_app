@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// Next.js بيشترط وجود "default export" عشان يعتبر الملف ده middleware حقيقي
 export default function proxy(request: NextRequest) {
   const url = request.nextUrl;
 
-  // الحماية هتشتغل هنا
+  // الحماية هتتنفذ بس لو الرابط بيبدأ بـ /dashboard
   if (url.pathname.startsWith('/dashboard')) {
     const basicAuth = request.headers.get('authorization');
 
@@ -12,13 +13,13 @@ export default function proxy(request: NextRequest) {
       const authValue = basicAuth.split(' ')[1];
       const [user, pwd] = atob(authValue).split(':');
 
-      // اليوزر والباسوورد
+      // اليوزر والباسوورد بتوعنا
       if (user === 'admin' && pwd === '123456') {
         return NextResponse.next();
       }
     }
 
-    // لو مفيش بيانات أو البيانات غلط، طلع شاشة الباسوورد
+    // لو البيانات غلط أو مش موجودة، طلع شاشة الباسوورد (زي اللي في صورتك رقم 4)
     return new NextResponse('Unauthorized', {
       status: 401,
       headers: {
@@ -30,7 +31,7 @@ export default function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// 👈 السر كله هنا: الخريطة اللي بتجبر السيرفر يشغل الحماية على الداش بورد
+// الـ Matcher السحري اللي بيعرف Vercel يطبق الحماية على إيه
 export const config = {
   matcher: ['/dashboard/:path*'],
 };
