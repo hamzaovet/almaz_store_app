@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 export default function proxy(request: NextRequest) {
   const url = request.nextUrl;
 
-  // حماية أي رابط بيبدأ بـ /dashboard
+  // الحماية هتشتغل هنا
   if (url.pathname.startsWith('/dashboard')) {
     const basicAuth = request.headers.get('authorization');
 
@@ -18,7 +18,7 @@ export default function proxy(request: NextRequest) {
       }
     }
 
-    // لو الداتا غلط أو مفيش داتا، اطلب تسجيل الدخول
+    // لو مفيش بيانات أو البيانات غلط، طلع شاشة الباسوورد
     return new NextResponse('Unauthorized', {
       status: 401,
       headers: {
@@ -29,3 +29,8 @@ export default function proxy(request: NextRequest) {
 
   return NextResponse.next();
 }
+
+// 👈 السر كله هنا: الخريطة اللي بتجبر السيرفر يشغل الحماية على الداش بورد
+export const config = {
+  matcher: ['/dashboard/:path*'],
+};
