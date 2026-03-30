@@ -154,8 +154,8 @@ export default function DashboardPage() {
         </h1>
         <p style={{ color: 'rgba(29,29,31,0.5)', fontSize: '0.9rem', minHeight: '1.4em' }}>
           {mounted
-            ? `مرحباً بك في لوحة تحكم ألماظ استور — ${today}`
-            : 'مرحباً بك في لوحة تحكم ألماظ استور'}
+            ? `مرحباً بك في لوحة تحكم ألمظ استور — ${today}`
+            : 'مرحباً بك في لوحة تحكم ألمظ استور'}
         </p>
       </div>
 

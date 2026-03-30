@@ -2,10 +2,19 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { useState, useEffect } from 'react'
 import { MapPin, Phone, MessageCircle } from 'lucide-react'
 
 export default function Footer() {
   const year = new Date().getFullYear()
+  const [whatsappNum, setWhatsappNum] = useState('201129592916')
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => setWhatsappNum(data.whatsappNumber))
+      .catch(console.error)
+  }, [])
 
   return (
     <footer
@@ -31,7 +40,7 @@ export default function Footer() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
               <Image
                 src="/assets/logo.png"
-                alt="ألماظ استور"
+                alt="ألمظ استور"
                 width={48}
                 height={48}
                 style={{ objectFit: 'contain', borderRadius: 10, filter: 'brightness(1.1)' }}
@@ -44,7 +53,7 @@ export default function Footer() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                ألماظ استور
+                ألمظ استور
               </span>
             </div>
             <p
@@ -55,7 +64,7 @@ export default function Footer() {
                 maxWidth: 300,
               }}
             >
-              وكيلك المعتمد لأبل في مصر. نقدم أحدث الأجهزة الذكية الحصرية بضمان رسمي وخدمة عملاء على مدار الساعة.
+              ألمظ استور هو وكيلك المعتمد لأبل في مصر. نقدم أحدث الأجهزة الذكية الحصرية بضمان رسمي وخدمة عملاء على مدار الساعة.
             </p>
           </div>
 
@@ -133,7 +142,7 @@ export default function Footer() {
                 </span>
               </div>
               <a
-                href="https://wa.me/201551190990"
+                href="https://wa.me/201129592916"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{

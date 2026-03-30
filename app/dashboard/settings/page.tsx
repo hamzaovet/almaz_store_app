@@ -1,18 +1,22 @@
 'use client'
 
-import { useState } from 'react'
-import { Shield, Users, Eye, EyeOff, Plus, Trash2, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Shield, Users, Eye, EyeOff, Plus, Trash2, Check, Loader2 } from 'lucide-react'
 
-type AdminUser = { id: number; name: string; role: '  مدير' | 'كاشير'; email: string }
-
-const initialUsers: AdminUser[] = [
-  { id: 1, name: 'Dr. Hamza',   role: '  مدير', email: 'hamza@almaz.eg' },
-  { id: 2, name: 'Ahmed Nabil', role: 'كاشير',  email: 'ahmed@almaz.eg' },
-  { id: 3, name: 'Sara Tarek',  role: 'كاشير',  email: 'sara@almaz.eg' },
-]
+type AdminUser = { id: string; name: string; username: string; role: 'مدير' | 'كاشير'; email: string }
 
 export default function SettingsPage() {
-  const [users, setUsers] = useState<AdminUser[]>(initialUsers)
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/users')
+      .then(res => res.json())
+      .then(data => {
+        if (data.users) setUsers(data.users)
+      })
+      .finally(() => setLoadingUsers(false))
+  }, [])
 
   // Password form
   const [pwForm, setPwForm]   = useState({ old: '', new1: '', new2: '' })
@@ -22,7 +26,7 @@ export default function SettingsPage() {
   const [pwError, setPwError] = useState('')
 
   // Add user form
-  const [addForm, setAddForm]   = useState({ name: '', email: '', role: 'كاشير' as AdminUser['role'] })
+  const [addForm, setAddForm]   = useState({ name: '', email: '', username: '', password: '', role: 'كاشير' as AdminUser['role'] })
   const [showAddForm, setShowAddForm] = useState(false)
   const [userSaved, setUserSaved]     = useState(false)
 
@@ -36,14 +40,32 @@ export default function SettingsPage() {
     setTimeout(() => setPwSaved(false), 3000)
   }
 
-  function handleAddUser(e: React.FormEvent) {
+  async function handleAddUser(e: React.FormEvent) {
     e.preventDefault()
-    if (!addForm.name || !addForm.email) return
-    setUsers([...users, { id: Date.now(), name: addForm.name, email: addForm.email, role: addForm.role }])
-    setAddForm({ name: '', email: '', role: 'كاشير' })
-    setShowAddForm(false)
-    setUserSaved(true)
-    setTimeout(() => setUserSaved(false), 3000)
+    if (!addForm.name || !addForm.email || !addForm.username || !addForm.password) return
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...addForm,
+          role: addForm.role.trim() // Ensure no leading spaces
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setUsers([data.user, ...users])
+        setAddForm({ name: '', email: '', username: '', password: '', role: 'كاشير' })
+        setShowAddForm(false)
+        setUserSaved(true)
+        setTimeout(() => setUserSaved(false), 3000)
+      } else {
+        alert(data.error || 'فشل في إضافة المستخدم')
+      }
+    } catch (err) {
+      alert('فشل في إضافة المستخدم')
+    }
   }
 
   const card: React.CSSProperties = { background: '#fff', borderRadius: 16, padding: '1.75rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgba(29,29,31,0.06)' }
@@ -146,16 +168,18 @@ export default function SettingsPage() {
               {[
                 { label: 'الاسم الكامل', key: 'name',  type: 'text',  placeholder: 'Ahmed Nabil' },
                 { label: 'البريد الإلكتروني', key: 'email', type: 'email', placeholder: 'user@almaz.eg' },
+                { label: 'اسم المستخدم', key: 'username', type: 'text', placeholder: 'ahmed_nabil' },
+                { label: 'كلمة المرور', key: 'password', type: 'password', placeholder: '••••••••' },
               ].map((f) => (
                 <div key={f.key}>
                   <label style={{ fontSize: '0.76rem', fontWeight: 700, color: 'rgba(29,29,31,0.55)', display: 'block', marginBottom: '0.3rem' }}>{f.label}</label>
-                  <input required type={f.type} placeholder={f.placeholder} value={addForm[f.key as 'name' | 'email']} onChange={(e) => setAddForm({ ...addForm, [f.key]: e.target.value })} style={inp} />
+                  <input required type={f.type} placeholder={f.placeholder} value={addForm[f.key as keyof typeof addForm]} onChange={(e) => setAddForm({ ...addForm, [f.key]: e.target.value })} style={inp} />
                 </div>
               ))}
               <div>
                 <label style={{ fontSize: '0.76rem', fontWeight: 700, color: 'rgba(29,29,31,0.55)', display: 'block', marginBottom: '0.3rem' }}>الصلاحية</label>
                 <select value={addForm.role} onChange={(e) => setAddForm({ ...addForm, role: e.target.value as AdminUser['role'] })} style={inp}>
-                  <option value="  مدير">مدير</option>
+                  <option value="مدير">مدير</option>
                   <option value="كاشير">كاشير</option>
                 </select>
               </div>
@@ -174,7 +198,7 @@ export default function SettingsPage() {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1rem', borderRadius: 12, background: '#fafafa', border: '1px solid rgba(29,29,31,0.06)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: u.role === '  مدير' ? 'rgba(212,175,55,0.15)' : 'rgba(99,102,241,0.12)', border: `1px solid ${u.role === '  مدير' ? 'rgba(212,175,55,0.25)' : 'rgba(99,102,241,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: u.role === '  مدير' ? '#D4AF37' : '#6366f1' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: u.role.trim() === 'مدير' ? 'rgba(212,175,55,0.15)' : 'rgba(99,102,241,0.12)', border: `1px solid ${u.role.trim() === 'مدير' ? 'rgba(212,175,55,0.25)' : 'rgba(99,102,241,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: u.role.trim() === 'مدير' ? '#D4AF37' : '#6366f1' }}>
                     {u.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -183,12 +207,17 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ padding: '0.22rem 0.7rem', borderRadius: 50, fontSize: '0.72rem', fontWeight: 700, background: u.role === '  مدير' ? 'rgba(212,175,55,0.12)' : 'rgba(99,102,241,0.1)', color: u.role === '  مدير' ? '#D4AF37' : '#6366f1' }}>
+                  <span style={{ padding: '0.22rem 0.7rem', borderRadius: 50, fontSize: '0.72rem', fontWeight: 700, background: u.role.trim() === 'مدير' ? 'rgba(212,175,55,0.12)' : 'rgba(99,102,241,0.1)', color: u.role.trim() === 'مدير' ? '#D4AF37' : '#6366f1' }}>
                     {u.role.trim()}
                   </span>
-                  {u.id !== 1 && (
+                  {u.username !== 'admin_almaz' && (
                     <button
-                      onClick={() => setUsers(users.filter((x) => x.id !== u.id))}
+                      onClick={async () => {
+                        if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+                          await fetch(`/api/users?id=${u.id}`, { method: 'DELETE' })
+                          setUsers(users.filter((x) => x.id !== u.id))
+                        }
+                      }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(29,29,31,0.3)', display: 'flex', padding: 4, transition: 'color 0.2s' }}
                       onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#dc2626')}
                       onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(29,29,31,0.3)')}

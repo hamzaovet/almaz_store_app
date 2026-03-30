@@ -11,7 +11,7 @@ const cairo = Cairo({
 })
 
 export const metadata: Metadata = {
-  title: 'ألماظ استور — Apple Premium Reseller',
+  title: 'ألمظ استور — Apple Premium Reseller',
   description: 'ارتقِ بتجربتك مع أحدث الأجهزة الذكية الحصرية. وكيل معتمد لأبل في مصر.',
   keywords: 'ألماظ, Apple, iPhone, iPad, Mac, مصر, القاهرة, Apple Premium Reseller',
 }

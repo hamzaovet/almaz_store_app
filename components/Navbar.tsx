@@ -15,6 +15,7 @@ export default function Navbar() {
   const router = useRouter()
   const [scrolled, setScrolled]     = useState(false)
   const [open, setOpen]             = useState(false)
+  const [whatsappNum, setWhatsappNum] = useState('201129592916')
 
   // ── Secret Knock: 5 clicks on logo within 2 s → /dashboard ──
   const clickCount = useRef(0)
@@ -37,6 +38,12 @@ export default function Navbar() {
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handler, { passive: true })
+
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => setWhatsappNum(data.whatsappNumber))
+      .catch(console.error)
+
     return () => {
       window.removeEventListener('scroll', handler)
       if (resetTimer.current) clearTimeout(resetTimer.current)
@@ -189,7 +196,7 @@ export default function Navbar() {
         >
           <a
             id="whatsapp-cta"
-            href="https://wa.me/201551190990"
+            href="https://wa.me/201129592916"
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -271,7 +278,7 @@ export default function Navbar() {
           ))}
 
           <a
-            href="https://wa.me/201551190990"
+            href="https://wa.me/201129592916"
             target="_blank"
             rel="noopener noreferrer"
             style={{

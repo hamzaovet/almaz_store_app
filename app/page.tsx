@@ -94,8 +94,8 @@ function SonarScanner({ products }: { products: Product[] }) {
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem', fontSize: '0.95rem' }}>
           {products.length > 0
-            ? `الرادار يكشف عن ${products.length} منتج متاح في ألماظ استور`
-            : 'الرادار يكشف عن أحدث الأجهزة المتاحة في ألماظ استور'}
+            ? `الرادار يكشف عن ${products.length} منتج متاح في ألمظ استور`
+            : 'الرادار يكشف عن أحدث الأجهزة المتاحة في ألمظ استور'}
         </p>
       </div>
 
@@ -179,6 +179,7 @@ function SonarScanner({ products }: { products: Product[] }) {
 /* ─── Main Page ──────────────────────────────────────────────── */
 export default function HomePage() {
   const [products, setProducts]               = useState<Product[]>([])
+  const [whatsappNum, setWhatsappNum]         = useState('201129592916')
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
@@ -189,6 +190,11 @@ export default function HomePage() {
       .then((d) => setProducts(d.products ?? []))
       .catch(console.error)
       .finally(() => setLoadingProducts(false))
+
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => setWhatsappNum(data.whatsappNumber))
+      .catch(console.error)
   }, [])
 
   /* ── Derived list for the Shop section ───────────────────── */
@@ -216,7 +222,7 @@ export default function HomePage() {
             </motion.p>
             <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }} style={{ fontSize: 'clamp(1.6rem, 4.5vw, 3rem)', fontWeight: 900, color: '#FFFFFF', lineHeight: 1.3, maxWidth: 740, textShadow: '0 2px 24px rgba(0,0,0,0.4)' }}>
               ارتقِ بتجربتك المحمولة مع أكثر الأجهزة حصرية في العالم.{' '}
-              <span style={{ color: '#D4AF37' }}>ألماظ استور</span>
+              <span style={{ color: '#D4AF37' }}>ألمظ استور</span>
             </motion.h1>
             <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.55, duration: 0.45, type: 'spring', stiffness: 180 }}>
               <a
@@ -436,7 +442,7 @@ export default function HomePage() {
                       </div>
                       {/* WhatsApp enquiry */}
                       <a
-                        href={`https://wa.me/201551190990?text=${encodeURIComponent(`أريد الاستفسار عن: ${p.name}`)}`}
+                        href={`https://wa.me/201129592916?text=${encodeURIComponent(`أريد الاستفسار عن: ${p.name}`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.55rem', background: 'rgba(212,175,55,0.07)', border: '1px solid rgba(212,175,55,0.22)', borderRadius: 10, color: '#D4AF37', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', transition: 'background 0.2s', fontFamily: 'inherit' }}

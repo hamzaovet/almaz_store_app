@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import {
   LayoutDashboard,
   Package,
@@ -9,6 +10,8 @@ import {
   BarChart3,
   Settings,
   ChevronLeft,
+  LogOut,
+  User,
 } from 'lucide-react'
 
 const navItems = [
@@ -25,6 +28,22 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [user, setUser] = useState<{name: string, role: string} | null>(null)
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) setUser(data.user)
+      })
+      .catch(console.error)
+  }, [])
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+  }
 
   return (
     <div
@@ -65,9 +84,9 @@ export default function DashboardLayout({
               marginBottom: '0.5rem',
             }}
           >
-            <span style={{ fontWeight: 600 }}>almaz</span>
+            <span style={{ fontWeight: 600 }}>ألمظ</span>
             <span style={{ color: '#D4AF37', margin: '0 0.3rem', fontWeight: 100 }}>|</span>
-            store
+            استور
           </div>
           <p
             style={{
@@ -82,8 +101,21 @@ export default function DashboardLayout({
             لوحة التحكم
           </p>
           <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.76rem' }}>
-            إدارة ألماظ استور
+            إدارة ألمظ استور
           </p>
+
+          {/* User Profile Info */}
+          {user && (
+            <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(212,175,55,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <User size={16} color="#D4AF37" />
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                <p style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</p>
+                <p style={{ color: '#D4AF37', fontSize: '0.7rem', fontWeight: 600 }}>{user.role}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Nav links */}
@@ -135,31 +167,30 @@ export default function DashboardLayout({
           )
         })}
 
-        {/* Back to store */}
+        {/* Logout Button */}
         <div style={{ marginTop: 'auto', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <Link
-            href="/"
+          <button
+            onClick={handleLogout}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.6rem',
-              color: 'rgba(255,255,255,0.35)',
+              color: '#ef4444',
               fontSize: '0.84rem',
+              fontWeight: 600,
               textDecoration: 'none',
               padding: '0.5rem 0.85rem',
               transition: 'color 0.2s',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              width: '100%'
             }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLAnchorElement).style.color = '#D4AF37')
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLAnchorElement).style.color =
-                'rgba(255,255,255,0.35)')
-            }
           >
-            <ChevronLeft size={15} />
-            العودة للمتجر
-          </Link>
+            <LogOut size={16} />
+            تسجيل الخروج
+          </button>
         </div>
       </aside>
 
