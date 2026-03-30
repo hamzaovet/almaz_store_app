@@ -1,6 +1,14 @@
 import mongoose from 'mongoose'
 
-const MONGODB_URI = 'mongodb://localhost:27017/almaz_premium'
+// ── Hard-fail if the env var is missing — never fall back to localhost ──
+if (!process.env.MONGODB_URI) {
+  throw new Error(
+    'FATAL: MONGODB_URI environment variable is missing. ' +
+    'Set it in .env.local (local dev) or in the Vercel project environment variables (production).'
+  )
+}
+
+const MONGODB_URI = process.env.MONGODB_URI
 
 interface MongooseCache {
   conn: typeof mongoose | null
@@ -19,26 +27,19 @@ export async function connectDB(): Promise<typeof mongoose> {
   // Return existing live connection immediately
   if (cached.conn) return cached.conn
 
-  // If no in-flight promise, start one — wrapped in try/catch so a
-  // refused connection never crashes the Next.js process.
   if (!cached.promise) {
     cached.promise = mongoose
       .connect(MONGODB_URI, {
-        bufferCommands:  false,   // fail fast instead of buffering ops
-        serverSelectionTimeoutMS: 4000, // give up after 4 s, not 30 s
-        dbName: 'almaz_premium',
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 8000, // Give Atlas a bit more time than local
       })
       .then((m) => {
-        console.log('✅ [Almaz DB] Connected → mongodb: almaz_premium')
+        console.log('✅ [Almaz DB] Connected →', MONGODB_URI.replace(/:\/\/.*@/, '://***@'))
         return m
       })
       .catch((err: Error) => {
-        // Clear the cached promise so the next request will retry
-        cached.promise = null
-        // Log clearly without crashing the process
+        cached.promise = null // Clear so the next request retries
         console.error('❌ [Almaz DB] Connection failed:', err.message)
-        console.error('   ➜  Is MongoDB running?  Try: mongod --dbpath <your-path>')
-        // Re-throw so callers can catch and return a 503
         throw err
       })
   }
