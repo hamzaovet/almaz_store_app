@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectDB } from '@/lib/db'
 import Product from '@/models/Product'
+import Category from '@/models/Category'
+import Supplier from '@/models/Supplier'
+import Branch from '@/models/Branch'
 
 /** Shared error response for any DB failure */
 function dbError(detail?: string) {
@@ -22,6 +25,9 @@ export async function GET(request: NextRequest) {
     
     // Build query. Hide costPrice if not an admin.
     const query = Product.find({}).sort({ createdAt: -1 })
+      .populate('categoryId')
+      .populate('supplierId')
+      .populate('branchId')
     if (!isAdmin) query.select('-costPrice')
     
     const products = await query.lean()
@@ -39,10 +45,10 @@ export async function POST(request: NextRequest) {
     await connectDB()
     const body = await request.json()
 
-    const { name, category, price, stock, costPrice } = body
-    if (!name || !category || price == null || stock == null) {
+    const { name, category, categoryId, price, stock, costPrice, condition, serialNumber, storage, color, batteryHealth, supplierId, isSerialized, branchId, ownershipType } = body
+    if (!name || (!category && !categoryId) || price == null || stock == null) {
       return NextResponse.json(
-        { success: false, message: 'الحقول المطلوبة: name, category, price, stock' },
+        { success: false, message: 'الحقول المطلوبة: name, category/categoryId, price, stock' },
         { status: 400 }
       )
     }
@@ -53,9 +59,19 @@ export async function POST(request: NextRequest) {
       price:    Number(price),
       costPrice:costPrice != null ? Number(costPrice) : 0,
       stock:    Number(stock),
+      categoryId: categoryId || undefined,
+      condition: condition || 'New',
       specs:    body.specs    ? String(body.specs).trim()    : undefined,
       imageUrl: body.imageUrl ? String(body.imageUrl).trim() : undefined,
       badge:    body.badge    ? String(body.badge).trim()    : undefined,
+      serialNumber: serialNumber ? String(serialNumber).trim() : undefined,
+      storage:  storage ? String(storage).trim() : undefined,
+      color:    color ? String(color).trim() : undefined,
+      batteryHealth: batteryHealth ? String(batteryHealth).trim() : undefined,
+      supplierId: supplierId ? supplierId : undefined,
+      isSerialized: isSerialized !== undefined ? Boolean(isSerialized) : true,
+      branchId: branchId ? branchId : undefined,
+      ownershipType: ownershipType ? String(ownershipType) : 'Owned',
     })
 
     return NextResponse.json({ success: true, product }, { status: 201 })

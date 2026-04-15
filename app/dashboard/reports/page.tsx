@@ -1,58 +1,83 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { TrendingUp, AlertTriangle, ShoppingBag, BarChart3, RefreshCw, Loader2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { TrendingUp, BarChart3, RefreshCw, Loader2, Calendar, MapPin, Printer, ArrowDownToLine, Package } from 'lucide-react'
 
-const LOW_STOCK_THRESHOLD = 5
-
-type ApiProduct = {
+type Product = {
   _id: string
   name: string
-  category: string
   price: number
+  costPrice?: number
   stock: number
+  branchId?: string
+  location?: string
 }
 
-type ApiSale = {
-  _id: string
+type SaleItem = {
+  productId: string
   productName: string
-  price: number
-  actualSalePrice?: number
-  costAtSale?: number
   qty: number
-  total: number
+  actualUnitPrice: number
+  costAtSale: number
+  fulfillmentLocation?: string
 }
 
-type ProductStat = {
+type Sale = {
+  _id: string
+  date: string
+  items?: SaleItem[]
+  totalSalePrice?: number
+  totalCost?: number
+  profit?: number
+  total?: number 
+  createdAt: string
+}
+
+type Expense = {
+  _id: string
+  title: string
+  amount: number
+  category?: string
+  date: string
+  createdAt: string
+}
+
+type Branch = {
+  _id: string
   name: string
-  category: string
-  unitsSold: number
-  revenue: number
-  stock: number
 }
 
 export default function ReportsPage() {
-  const [products, setProducts]     = useState<ApiProduct[]>([])
-  const [sales, setSales]           = useState<ApiSale[]>([])
-  const [stats, setStats]           = useState<any>(null)
-  const [loading, setLoading]       = useState(true)
-  const [mounted, setMounted]       = useState(false)
-  const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [products, setProducts] = useState<Product[]>([])
+  const [sales, setSales] = useState<Sale[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
 
-  /* ── Fetch both datasets ──────────────────────────────────── */
+  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  
+  // Filters
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]
+  })
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [selectedBranch, setSelectedBranch] = useState<string>('all')
+
+  /* ── Fetch ────────────────────────────────────────────── */
   async function fetchAll() {
     setLoading(true)
     try {
-      const [pRes, sRes, stRes] = await Promise.all([
+      const [pRes, sRes, eRes, bRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/sales'),
-        fetch('/api/stats'),
+        fetch('/api/expenses'),
+        fetch('/api/branches'),
       ])
-      const [pData, sData, stData] = await Promise.all([pRes.json(), sRes.json(), stRes.json()])
+      const [pData, sData, eData, bData] = await Promise.all([pRes.json(), sRes.json(), eRes.json(), bRes.json()])
       setProducts(pData.products ?? [])
       setSales(sData.sales ?? [])
-      setStats(stData.stats ?? null)
-      setLastRefresh(new Date())
+      setExpenses(eData.expenses ?? [])
+      setBranches(bData.branches ?? [])
     } catch (err) {
       console.error('[Reports] fetch error', err)
     } finally {
@@ -65,216 +90,352 @@ export default function ReportsPage() {
     fetchAll()
   }, [])
 
-  /* ── Derived stats (computed from real data) ──────────────── */
-  const totalRevenue = stats?.totalRevenue ?? 0
-  const totalCost    = stats?.totalCost ?? 0
-  const netProfit    = stats?.netProfit ?? 0
-  const totalUnits   = sales.reduce((s, e) => s + e.qty, 0)
-  const lowStock     = products.filter((p) => p.stock <= LOW_STOCK_THRESHOLD)
+  /* ── Calculations & Filtering ─────────────────────────── */
+  const { 
+    grossRevenue, grossProfit, totalExpenses, netProfit, stockValuation,
+    filteredSales, filteredExpenses
+  } = useMemo(() => {
+    const start = startDate ? new Date(startDate) : new Date('2000-01-01')
+    start.setHours(0, 0, 0, 0)
+    const end = endDate ? new Date(endDate) : new Date()
+    end.setHours(23, 59, 59, 999)
 
-  // Aggregate sales by product name → top-selling table
-  const statMap = new Map<string, ProductStat>()
-  for (const s of sales) {
-    const existing = statMap.get(s.productName)
-    const product  = products.find((p) => p.name === s.productName)
-    if (existing) {
-      existing.unitsSold += s.qty
-      existing.revenue   += s.total ?? s.price * s.qty
-    } else {
-      statMap.set(s.productName, {
-        name:      s.productName,
-        category:  product?.category ?? '—',
-        unitsSold: s.qty,
-        revenue:   s.total ?? s.actualSalePrice ? s.actualSalePrice! * s.qty : s.price * s.qty,
-        stock:     product?.stock ?? 0,
-      })
+    let gRev = 0, gCost = 0, tExp = 0, sVal = 0
+    const matchedSales: Sale[] = []
+    const matchedExpenses: Expense[] = []
+
+    // Filter and calculate Sales
+    sales.forEach(sale => {
+      const saleDate = new Date(sale.date || sale.createdAt)
+      if (saleDate >= start && saleDate <= end) {
+        let saleMatches = false
+        let saleGRev = 0
+        let saleGCost = 0
+
+        sale.items?.forEach(item => {
+          const itemBranchId = item.fulfillmentLocation 
+          let matchesBranch = true
+          if (selectedBranch !== 'all') {
+            const selectedBranchObj = branches.find(b => b._id === selectedBranch)
+            if (selectedBranchObj) {
+               matchesBranch = (itemBranchId === selectedBranchObj._id || itemBranchId === selectedBranchObj.name)
+            } else {
+               matchesBranch = false
+            }
+          }
+
+          if (matchesBranch) {
+            saleMatches = true
+            saleGRev += (item.actualUnitPrice * item.qty) || 0
+            saleGCost += (item.costAtSale * item.qty) || 0
+          }
+        })
+
+        if (!sale.items || sale.items.length === 0) {
+           if (selectedBranch === 'all') {
+              saleMatches = true
+              saleGRev += sale.totalSalePrice ?? sale.total ?? 0
+              saleGCost += sale.totalCost ?? 0
+           }
+        }
+
+        if (saleMatches) {
+          gRev += saleGRev
+          gCost += saleGCost
+          // Create shallow copy with computed filtered totals for the ledger printout
+          matchedSales.push({ ...sale, totalSalePrice: saleGRev, profit: saleGRev - saleGCost, totalCost: saleGCost })
+        }
+      }
+    })
+
+    // Filter and calculate Expenses
+    expenses.forEach(exp => {
+      const expDate = new Date(exp.date || exp.createdAt)
+      if (expDate >= start && expDate <= end) {
+        tExp += exp.amount || 0
+        matchedExpenses.push(exp)
+      }
+    })
+
+    // Filter and calculate Stock Valuation
+    products.forEach(prod => {
+       let matchesBranch = true
+       if (selectedBranch !== 'all') {
+          matchesBranch = (prod.branchId === selectedBranch)
+       }
+       if (matchesBranch) {
+         sVal += (prod.stock * (prod.costPrice || 0))
+       }
+    })
+
+    return { 
+      grossRevenue: gRev, grossProfit: gRev - gCost, totalExpenses: tExp, 
+      netProfit: (gRev - gCost) - tExp, stockValuation: sVal,
+      filteredSales: matchedSales, filteredExpenses: matchedExpenses
     }
-  }
-  const topProducts = [...statMap.values()].sort((a, b) => b.unitsSold - a.unitsSold)
-  const maxUnits    = topProducts[0]?.unitsSold || 1
+  }, [sales, expenses, products, branches, startDate, endDate, selectedBranch])
 
-  /* ── Styles ─────────────────────────────────────────────── */
-  const card: React.CSSProperties = {
-    background: '#fff', borderRadius: 16, padding: '1.5rem',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgba(29,29,31,0.06)',
+
+  /* ── Export PDF ───────────────────────────────────────── */
+  const handlePrint = () => {
+    // Inject the document title dynamically so "Save as PDF" reads cleanly
+    let branchName = 'All_Branches'
+    if (selectedBranch !== 'all') {
+      const b = branches.find(x => x._id === selectedBranch)
+      if (b) branchName = b.name.replace(/\s+/g, '_')
+    }
+    document.title = `Almaz_Report_${branchName}_${startDate}_to_${endDate}`
+    window.print()
   }
+
+  /* ── UI Constants ─────────────────────────────────────── */
+  const cardStyle: React.CSSProperties = {
+    background: '#141414', borderRadius: 16, padding: '1.5rem',
+    border: '1px solid rgba(255,255,255,0.08)', position: 'relative', overflow: 'hidden'
+  }
+  const filterInput: React.CSSProperties = {
+    padding: '0.65rem 0.9rem', borderRadius: 10, background: '#111', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', outline: 'none', fontFamily: 'inherit', fontSize: '0.85rem', colorScheme: 'dark'
+  }
+
+  if (!mounted) return null
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: '3rem' }}>
+      
+      {/* Top Header & Export (no-print) */}
+      <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.3rem' }}>تحليلات الأداء</p>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#1D1D1F' }}>التقارير</h1>
-          <p style={{ color: 'rgba(29,29,31,0.45)', fontSize: '0.82rem', marginTop: '0.2rem' }}>
-            آخر تحديث: {mounted ? lastRefresh.toLocaleTimeString('ar-EG') : ''}
-          </p>
+           <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#0ea5e9', textTransform: 'uppercase', marginBottom: '0.3rem' }}>مركز التقارير المتقدم</p>
+           <h1 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#FFFFFF' }}>لوحة الأداء المالي</h1>
         </div>
-        <button
-          onClick={fetchAll}
-          disabled={loading}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#f4f4f6', color: '#1D1D1F', border: '1px solid rgba(29,29,31,0.1)', borderRadius: 12, padding: '0.62rem 1.2rem', fontWeight: 600, fontSize: '0.88rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
-        >
-          <RefreshCw size={15} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-          تحديث
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button
+            onClick={fetchAll}
+            disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#111', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '0.7rem 1.2rem', fontWeight: 600, fontSize: '0.88rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+          >
+            <RefreshCw size={15} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            تحديث البيانات
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 12, padding: '0.7rem 1.4rem', fontWeight: 700, fontSize: '0.9rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 18px rgba(14,165,233,0.35)' }}
+          >
+            <Printer size={16} />
+            طباعة التقرير (PDF)
+          </button>
+        </div>
       </div>
 
-      {/* Loading overlay */}
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'rgba(29,29,31,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', fontSize: '1rem' }}>
-          <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
-          جارٍ تحميل البيانات…
+      {/* Control Panel / Filters (no-print) */}
+      <div className="no-print" style={{ background: '#080808', border: '1px solid rgba(14,165,233,0.2)', padding: '1.5rem', borderRadius: 16, marginBottom: '2rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: '1 1 200px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={13} /> من تاريخ</label>
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={filterInput} />
         </div>
-      )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: '1 1 200px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Calendar size={13} /> إلى تاريخ</label>
+          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={filterInput} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: '1 1 250px' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><MapPin size={13} /> الفرع المستهدف</label>
+          <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)} style={{ ...filterInput, color: selectedBranch === 'all' ? '#0ea5e9' : '#fff' }}>
+            <option value="all">تجميعي (Consolidated / All Branches)</option>
+            {branches.map(b => (
+              <option key={b._id} value={b._id} style={{color: '#fff', background: '#111'}}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      {!loading && (
-        <>
-          {/* KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-
-            {/* إجمالي المبيعات الفعلي */}
-            <div style={{ ...card, background: 'linear-gradient(135deg, #0a0a0c, #1a1206)', border: '1px solid rgba(212,175,55,0.2)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>إجمالي المبيعات (سعر البيع الفعلي)</p>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(212,175,55,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <TrendingUp size={18} color="#D4AF37" strokeWidth={2} />
-                </div>
+      {/* ── The Printable Area ── */}
+      <div id="printable-report" style={{ background: 'transparent' }}>
+         
+         {/* Print Page Header */}
+         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
+           <div>
+             <h2 style={{ fontSize: '1.4rem', color: 'inherit', fontWeight: 800 }}>التقرير المالي العام</h2>
+             <p style={{ color: 'var(--text-tertiary)', fontSize: '0.85rem', marginTop: '0.2rem', fontWeight: 600 }}>
+               الفترة من {startDate} إلى {endDate} • {selectedBranch === 'all' ? 'جميع الفروع' : branches.find(b => b._id === selectedBranch)?.name}
+             </p>
+           </div>
+           <div style={{ margin: '0 auto 0 0', textAlign: 'left' }}>
+              <div style={{ direction: 'ltr', fontSize: '1.4rem', fontWeight: 300, letterSpacing: '0.14em' }}>
+                <span style={{ fontWeight: 600 }}>ألمظ</span>
+                <span className="no-print" style={{ color: '#0ea5e9', margin: '0 0.3rem', fontWeight: 100 }}>|</span>
+                <span className="print-only-inline" style={{ margin: '0 0.3rem', fontWeight: 100, display: 'none' }}>|</span>
+                استور
               </div>
-              <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#D4AF37', direction: 'ltr', letterSpacing: '-0.02em' }}>
-                {totalRevenue.toLocaleString('ar-EG')}
-              </p>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.25rem' }}>ج.م إجمالي</p>
-            </div>
+           </div>
+         </div>
 
-            {/* إجمالي التكلفة */}
-            <div style={{ ...card, background: 'linear-gradient(135deg, #0f0c2e, #1a1650)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.05em' }}>إجمالي التكلفة (سعر الشراء)</p>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShoppingBag size={18} color="#818cf8" strokeWidth={2} />
-                </div>
-              </div>
-              <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#818cf8', direction: 'ltr', letterSpacing: '-0.02em' }}>
-                {totalCost.toLocaleString('ar-EG')}
-              </p>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.25rem' }}>ج.م مباع</p>
-            </div>
+         {loading ? (
+             <div className="no-print" style={{ textAlign: 'center', padding: '4rem', color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', fontSize: '1rem' }}>
+               <Loader2 size={22} style={{ animation: 'spin 1s linear infinite' }} />
+               جارٍ معالجة البيانات…
+             </div>
+         ) : (
+           <>
+             {/* KPI Cards */}
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '3rem' }}>
+               
+               {/* إجمالي المبيعات */}
+               <div className="kpi-card" style={cardStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>إجمالي الإيرادات</p>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(14,165,233,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <TrendingUp size={18} color="#0ea5e9" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '1.8rem', fontWeight: 900, color: '#0ea5e9', direction: 'ltr' }}>{grossRevenue.toLocaleString('ar-EG')}</p>
+               </div>
 
-            {/* تنبيهات المخزون */}
-            <div style={{ ...card, background: lowStock.length > 0 ? 'linear-gradient(135deg, #2d1200, #3d1a00)' : '#fff', border: `1px solid ${lowStock.length > 0 ? 'rgba(245,158,11,0.3)' : 'rgba(29,29,31,0.06)'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: lowStock.length > 0 ? 'rgba(255,255,255,0.55)' : 'rgba(29,29,31,0.5)', letterSpacing: '0.05em' }}>تنبيهات المخزون</p>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <AlertTriangle size={18} color="#f59e0b" strokeWidth={2} />
-                </div>
-              </div>
-              <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#f59e0b', direction: 'ltr', letterSpacing: '-0.02em' }}>
-                {lowStock.length}
-              </p>
-              <p style={{ fontSize: '0.75rem', color: lowStock.length > 0 ? 'rgba(255,255,255,0.35)' : 'rgba(29,29,31,0.4)', marginTop: '0.25rem' }}>
-                منتج تحت {LOW_STOCK_THRESHOLD} وحدات
-              </p>
-            </div>
+               {/* مجمل الربح */}
+               <div className="kpi-card" style={cardStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>مجمل الربح (Gross)</p>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <BarChart3 size={18} color="#22c55e" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '1.8rem', fontWeight: 900, color: '#22c55e', direction: 'ltr' }}>{grossProfit.toLocaleString('ar-EG')}</p>
+               </div>
 
-            {/* صافي الأرباح */}
-            <div style={card}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'rgba(29,29,31,0.5)', letterSpacing: '0.05em' }}>صافي الأرباح</p>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <BarChart3 size={18} color="#22c55e" strokeWidth={2} />
-                </div>
-              </div>
-              <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#16a34a', direction: 'ltr', letterSpacing: '-0.02em' }}>
-                {netProfit.toLocaleString('ar-EG')}
-              </p>
-              <p style={{ fontSize: '0.75rem', color: 'rgba(29,29,31,0.4)', marginTop: '0.25rem' }}>الإيراد - التكلفة - المصروفات</p>
-            </div>
-          </div>
+               {/* المصروفات */}
+               <div className="kpi-card" style={cardStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                     <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>إجمالي المصروفات</p>
+                     <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       <ArrowDownToLine size={18} color="#ef4444" strokeWidth={2} />
+                     </div>
+                  </div>
+                  <p style={{ fontSize: '1.8rem', fontWeight: 900, color: '#ef4444', direction: 'ltr' }}>{totalExpenses.toLocaleString('ar-EG')}</p>
+               </div>
 
-          {/* Low stock alert banner */}
-          {lowStock.length > 0 && (
-            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-              <AlertTriangle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <p style={{ fontWeight: 700, color: '#92400e', fontSize: '0.92rem', marginBottom: '0.35rem' }}>
-                  تحذير: {lowStock.length} منتج يحتاج إعادة تخزين
-                </p>
-                <p style={{ color: 'rgba(146,64,14,0.75)', fontSize: '0.82rem' }}>
-                  {lowStock.map((p) => `${p.name} (${p.stock} متبقي)`).join(' • ')}
-                </p>
-              </div>
-            </div>
-          )}
+               {/* صافي الربح */}
+               <div className="kpi-card" style={cardStyle}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>صافي الأرباح (Net)</p>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(168,85,247,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <BarChart3 size={18} color="#a855f7" strokeWidth={2} />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: '1.8rem', fontWeight: 900, color: '#a855f7', direction: 'ltr' }}>{netProfit.toLocaleString('ar-EG')}</p>
+               </div>
 
-          {/* Top Selling Products Table */}
-          <div style={{ ...card, overflowX: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <TrendingUp size={18} color="#D4AF37" />
-              </div>
-              <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1D1D1F' }}>المنتجات الأكثر مبيعاً</h2>
-            </div>
+               {/* تقييم المخزون */}
+               <div className="kpi-card" style={{ ...cardStyle, gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                     <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                       <Package size={22} color="#f59e0b" strokeWidth={2} />
+                     </div>
+                     <div>
+                       <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.05em', marginBottom: '0.2rem' }}>إجمالي تقييم المخزون المتبقي بالقيمة الشرائية</p>
+                       <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f59e0b', direction: 'ltr' }}>{stockValuation.toLocaleString('ar-EG')} ج.م</p>
+                     </div>
+                  </div>
+               </div>
+             </div>
 
-            {topProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2.5rem', color: 'rgba(29,29,31,0.35)' }}>
-                {sales.length === 0
-                  ? 'لا توجد مبيعات بعد — سجّل أول عملية بيع لتظهر هنا'
-                  : 'لا توجد بيانات كافية'}
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid rgba(212,175,55,0.12)' }}>
-                    {['الترتيب', 'المنتج', 'القسم', 'الوحدات المباعة', 'الإيرادات', 'المخزون المتبقي'].map((h) => (
-                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: 'rgba(29,29,31,0.45)', fontSize: '0.76rem', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {topProducts.map((p, i) => {
-                    const barPct = Math.round((p.unitsSold / maxUnits) * 100)
-                    return (
-                      <tr key={p.name} style={{ borderBottom: '1px solid rgba(29,29,31,0.05)' }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = '#fafafa')}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')}>
-                        <td style={{ padding: '1rem', width: 60 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: i < 3 ? 'rgba(212,175,55,0.15)' : 'rgba(29,29,31,0.06)', color: i < 3 ? '#D4AF37' : 'rgba(29,29,31,0.4)', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {i + 1}
-                          </div>
-                        </td>
-                        <td style={{ padding: '1rem', minWidth: 220 }}>
-                          <div style={{ fontWeight: 700, color: '#1D1D1F', marginBottom: '0.4rem' }}>{p.name}</div>
-                          <div style={{ height: 4, borderRadius: 50, background: 'rgba(29,29,31,0.06)', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${barPct}%`, background: i === 0 ? '#D4AF37' : i === 1 ? '#a78bfa' : '#6ee7b7', borderRadius: 50, transition: 'width 0.6s ease' }} />
-                          </div>
-                        </td>
-                        <td style={{ padding: '1rem', color: 'rgba(29,29,31,0.55)', whiteSpace: 'nowrap' }}>{p.category}</td>
-                        <td style={{ padding: '1rem', fontWeight: 700, color: '#1D1D1F' }}>
-                          <span style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1', padding: '0.2rem 0.7rem', borderRadius: 50, fontSize: '0.82rem', fontWeight: 800 }}>
-                            {p.unitsSold} وحدة
-                          </span>
-                        </td>
-                        <td style={{ padding: '1rem', fontWeight: 700, color: '#D4AF37', direction: 'ltr', whiteSpace: 'nowrap' }}>
-                          {p.revenue.toLocaleString('ar-EG')} ج.م
-                        </td>
-                        <td style={{ padding: '1rem' }}>
-                          <span style={{ padding: '0.22rem 0.65rem', borderRadius: 50, fontSize: '0.76rem', fontWeight: 700, background: p.stock <= LOW_STOCK_THRESHOLD ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.08)', color: p.stock <= LOW_STOCK_THRESHOLD ? '#d97706' : '#16a34a' }}>
-                            {p.stock} متبقي
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </>
-      )}
+             {/* Detailed Drill-Down Tables */}
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+               
+               {/* Sales Ledger */}
+               <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem', color: 'inherit', borderBottom: '2px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>سجل المبيعات التفصيلي</h3>
+                  {filteredSales.length === 0 ? (
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>لا توجد مبيعات في هذه الفترة.</p>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', textAlign: 'right', fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>التاريخ</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>رقم الفاتورة</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>الفرع</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>التفاصيل</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>الإيراد</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>مجمل الربح</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredSales.map(sale => {
+                            const dateStr = sale.date || sale.createdAt.split('T')[0]
+                            const itemsStr = sale.items?.map(i => `${i.productName} (x${i.qty})`).join('، ') || 'بيانات قديمة'
+                            const branchStr = sale.items && sale.items[0] ? sale.items[0].fulfillmentLocation : 'غير محدد'
+                            return (
+                              <tr key={sale._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: '0.75rem' }}>{dateStr}</td>
+                                <td style={{ padding: '0.75rem', fontFamily: 'monospace' }}>#{sale._id.slice(-6).toUpperCase()}</td>
+                                <td style={{ padding: '0.75rem' }}>{branchStr}</td>
+                                <td style={{ padding: '0.75rem', maxWidth: 300 }}>{itemsStr}</td>
+                                <td style={{ padding: '0.75rem', fontWeight: 700, color: '#0ea5e9' }}>{(sale.totalSalePrice ?? 0).toLocaleString('ar-EG')}</td>
+                                <td style={{ padding: '0.75rem', fontWeight: 700, color: '#22c55e' }}>{(sale.profit ?? 0).toLocaleString('ar-EG')}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+               </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+               {/* Expenses Ledger */}
+               <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem', color: 'inherit', borderBottom: '2px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>سجل المصروفات التفصيلي</h3>
+                  {filteredExpenses.length === 0 ? (
+                    <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>لا توجد مصروفات في هذه الفترة.</p>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', textAlign: 'right', fontSize: '0.85rem' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>التاريخ</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>البند</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>التصنيف</th>
+                            <th style={{ padding: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-tertiary)' }}>المبلغ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredExpenses.map(exp => {
+                            const dateStr = exp.date ? exp.date.split('T')[0] : exp.createdAt.split('T')[0]
+                            return (
+                              <tr key={exp._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <td style={{ padding: '0.75rem' }}>{dateStr}</td>
+                                <td style={{ padding: '0.75rem', fontWeight: 600 }}>{exp.title}</td>
+                                <td style={{ padding: '0.75rem' }}>{exp.category || 'عام'}</td>
+                                <td style={{ padding: '0.75rem', fontWeight: 700, color: '#ef4444' }}>{exp.amount.toLocaleString('ar-EG')}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+               </div>
+
+             </div>
+           </>
+         )}
+         
+         <div className="print-only-block" style={{ marginTop: '2rem', borderTop: '1px solid rgba(0,0,0,0.1)', paddingTop: '1rem', textAlign: 'center', display: 'none' }}>
+           <p style={{ fontSize: '0.65rem', color: '#666' }}>ألمظ استور للإلكترونيات والأجهزة الذكية — وثيقة مالية صالحة للفترة المحددة أعلاه.</p>
+         </div>
+      </div>
+      
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @media print {
+          .print-only-inline { display: inline !important; color: #000 !important; }
+          .print-only-block { display: block !important; }
+          .kpi-card { border: 1px solid #ddd !important; }
+          table { width: 100% !important; border-collapse: collapse !important; }
+          th, td { border: 1px solid #ccc !important; padding: 8px !important; color: #000 !important; }
+          th { background: #f9f9f9 !important; font-weight: bold !important; }
+          tr { page-break-inside: avoid !important; }
+        }
+      `}</style>
     </div>
   )
 }

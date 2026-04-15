@@ -69,14 +69,14 @@ export default function SettingsPage() {
   }
 
   const card: React.CSSProperties = { background: '#fff', borderRadius: 16, padding: '1.75rem', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', border: '1px solid rgba(29,29,31,0.06)' }
-  const inp: React.CSSProperties  = { width: '100%', padding: '0.65rem 0.9rem', border: '1px solid rgba(29,29,31,0.14)', borderRadius: 10, fontSize: '0.92rem', fontFamily: 'inherit', color: '#1D1D1F', outline: 'none', background: '#fafafa', boxSizing: 'border-box' }
+  const inp: React.CSSProperties  = { width: '100%', padding: '0.65rem 0.9rem', border: '1px solid rgba(29,29,31,0.14)', borderRadius: 10, fontSize: '0.92rem', fontFamily: 'inherit', color: '#FFFFFF', outline: 'none', background: '#fafafa', boxSizing: 'border-box' }
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.3rem' }}>الإعدادات</p>
-        <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#1D1D1F' }}>إعدادات النظام</h1>
+        <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#0ea5e9', textTransform: 'uppercase', marginBottom: '0.3rem' }}>الإعدادات</p>
+        <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#FFFFFF' }}>إعدادات النظام</h1>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -84,11 +84,11 @@ export default function SettingsPage() {
         {/* ── Card 1: Change Password ─────────────────── */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield size={20} color="#D4AF37" strokeWidth={1.8} />
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Shield size={20} color="#0ea5e9" strokeWidth={1.8} />
             </div>
             <div>
-              <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1D1D1F' }}>تغيير كلمة المرور</h2>
+              <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>تغيير كلمة المرور</h2>
               <p style={{ fontSize: '0.78rem', color: 'rgba(29,29,31,0.45)', marginTop: '0.1rem' }}>تأكد من استخدام كلمة مرور قوية لأمان النظام</p>
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function SettingsPage() {
               </div>
             ))}
             <div style={{ gridColumn: '1 / -1' }}>
-              <button type="submit" style={{ background: '#D4AF37', color: '#fff', border: 'none', borderRadius: 12, padding: '0.75rem 2rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button type="submit" style={{ background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 12, padding: '0.75rem 2rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', fontFamily: 'inherit' }}>
                 حفظ كلمة المرور
               </button>
             </div>
@@ -144,7 +144,7 @@ export default function SettingsPage() {
                 <Users size={20} color="#6366f1" strokeWidth={1.8} />
               </div>
               <div>
-                <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1D1D1F' }}>إدارة المستخدمين</h2>
+                <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>إدارة المستخدمين</h2>
                 <p style={{ fontSize: '0.78rem', color: 'rgba(29,29,31,0.45)', marginTop: '0.1rem' }}>{users.length} مستخدمين مسجلين</p>
               </div>
             </div>
@@ -164,7 +164,7 @@ export default function SettingsPage() {
 
           {/* Add user form */}
           {showAddForm && (
-            <form onSubmit={handleAddUser} style={{ background: '#f8f8fa', borderRadius: 12, padding: '1.25rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', border: '1px solid rgba(99,102,241,0.15)' }}>
+            <form onSubmit={handleAddUser} style={{ background: '#111111', borderRadius: 12, padding: '1.25rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem', border: '1px solid rgba(99,102,241,0.15)' }}>
               {[
                 { label: 'الاسم الكامل', key: 'name',  type: 'text',  placeholder: 'Ahmed Nabil' },
                 { label: 'البريد الإلكتروني', key: 'email', type: 'email', placeholder: 'user@almaz.eg' },
@@ -185,7 +185,7 @@ export default function SettingsPage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
                 <button type="submit" style={{ flex: 1, background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '0.65rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.88rem' }}>إضافة</button>
-                <button type="button" onClick={() => setShowAddForm(false)} style={{ flex: 1, background: 'rgba(29,29,31,0.06)', color: '#1D1D1F', border: 'none', borderRadius: 10, padding: '0.65rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.88rem' }}>إلغاء</button>
+                <button type="button" onClick={() => setShowAddForm(false)} style={{ flex: 1, background: 'rgba(29,29,31,0.06)', color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '0.65rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.88rem' }}>إلغاء</button>
               </div>
             </form>
           )}
@@ -198,16 +198,16 @@ export default function SettingsPage() {
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.9rem 1rem', borderRadius: 12, background: '#fafafa', border: '1px solid rgba(29,29,31,0.06)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: u.role.trim() === 'مدير' ? 'rgba(212,175,55,0.15)' : 'rgba(99,102,241,0.12)', border: `1px solid ${u.role.trim() === 'مدير' ? 'rgba(212,175,55,0.25)' : 'rgba(99,102,241,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: u.role.trim() === 'مدير' ? '#D4AF37' : '#6366f1' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: u.role.trim() === 'مدير' ? 'rgba(14,165,233,0.15)' : 'rgba(99,102,241,0.12)', border: `1px solid ${u.role.trim() === 'مدير' ? 'rgba(14,165,233,0.25)' : 'rgba(99,102,241,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 700, color: u.role.trim() === 'مدير' ? '#0ea5e9' : '#6366f1' }}>
                     {u.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p style={{ fontWeight: 700, color: '#1D1D1F', fontSize: '0.92rem' }}>{u.name}</p>
+                    <p style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '0.92rem' }}>{u.name}</p>
                     <p style={{ fontSize: '0.76rem', color: 'rgba(29,29,31,0.45)', direction: 'ltr', textAlign: 'right' }}>{u.email}</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ padding: '0.22rem 0.7rem', borderRadius: 50, fontSize: '0.72rem', fontWeight: 700, background: u.role.trim() === 'مدير' ? 'rgba(212,175,55,0.12)' : 'rgba(99,102,241,0.1)', color: u.role.trim() === 'مدير' ? '#D4AF37' : '#6366f1' }}>
+                  <span style={{ padding: '0.22rem 0.7rem', borderRadius: 50, fontSize: '0.72rem', fontWeight: 700, background: u.role.trim() === 'مدير' ? 'rgba(14,165,233,0.12)' : 'rgba(99,102,241,0.1)', color: u.role.trim() === 'مدير' ? '#0ea5e9' : '#6366f1' }}>
                     {u.role.trim()}
                   </span>
                   {u.username !== 'admin_almaz' && (

@@ -1,19 +1,25 @@
 import type { Metadata } from 'next'
-import { Cairo } from 'next/font/google'
+import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google'
 import './globals.css'
 import ClientShell from './shell'
 
-const cairo = Cairo({
-  subsets: ['arabic', 'latin'],
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+const inter = Inter({
+  subsets: ['latin'],
   display: 'swap',
-  variable: '--font-cairo',
+  variable: '--font-inter',
+})
+
+const ibmPlexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ['arabic'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-ibm-arabic',
 })
 
 export const metadata: Metadata = {
   title: 'ألمظ استور — Apple Premium Reseller',
   description: 'ارتقِ بتجربتك مع أحدث الأجهزة الذكية الحصرية. وكيل معتمد لأبل في مصر.',
-  keywords: 'ألماظ, Apple, iPhone, iPad, Mac, مصر, القاهرة, Apple Premium Reseller',
+  keywords: 'ألمظ, Apple, iPhone, iPad, Mac, مصر, القاهرة, Apple Premium Reseller',
 }
 
 export default function RootLayout({
@@ -26,7 +32,7 @@ export default function RootLayout({
       lang="ar"
       dir="rtl"
       suppressHydrationWarning
-      className={cairo.variable}
+      className={`${inter.variable} ${ibmPlexArabic.variable}`}
     >
       <body style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
         {/*

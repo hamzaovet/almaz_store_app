@@ -43,13 +43,13 @@ export default function Footer() {
                 alt="ألمظ استور"
                 width={48}
                 height={48}
-                style={{ objectFit: 'contain', borderRadius: 10, filter: 'brightness(1.1)' }}
+                style={{ objectFit: 'contain', borderRadius: 10, filter: 'brightness(1.1)', width: 'auto', height: 'auto' }}
               />
               <span
                 style={{
                   fontSize: '1.35rem',
                   fontWeight: 900,
-                  color: '#D4AF37',
+                  color: '#0ea5e9',
                   letterSpacing: '-0.01em',
                 }}
               >
@@ -76,7 +76,7 @@ export default function Footer() {
                 fontWeight: 800,
                 color: '#FFFFFF',
                 marginBottom: '1.25rem',
-                borderBottom: '2px solid #D4AF37',
+                borderBottom: '2px solid #0ea5e9',
                 paddingBottom: '0.5rem',
                 display: 'inline-block',
               }}
@@ -100,7 +100,7 @@ export default function Footer() {
                       transition: 'color 0.2s',
                     }}
                     onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLAnchorElement).style.color = '#D4AF37')
+                      ((e.currentTarget as HTMLAnchorElement).style.color = '#0ea5e9')
                     }
                     onMouseLeave={(e) =>
                       ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.7)')
@@ -121,7 +121,7 @@ export default function Footer() {
                 fontWeight: 800,
                 color: '#FFFFFF',
                 marginBottom: '1.25rem',
-                borderBottom: '2px solid #D4AF37',
+                borderBottom: '2px solid #0ea5e9',
                 paddingBottom: '0.5rem',
                 display: 'inline-block',
               }}
@@ -130,13 +130,13 @@ export default function Footer() {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <MapPin size={18} color="#D4AF37" strokeWidth={1.8} />
+                <MapPin size={18} color="#0ea5e9" strokeWidth={1.8} />
                 <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.95rem', fontWeight: 600 }}>
                   السراج مول، مكرم عبيد، مدينة نصر
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <Phone size={18} color="#D4AF37" strokeWidth={1.8} />
+                <Phone size={18} color="#0ea5e9" strokeWidth={1.8} />
                 <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.95rem', fontWeight: 600, direction: 'ltr' }}>
                   هاتف: 01129592916
                 </span>
@@ -149,9 +149,9 @@ export default function Footer() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '0.5rem',
-                  background: 'rgba(212,175,55,0.15)',
-                  border: '1px solid rgba(212,175,55,0.35)',
-                  color: '#D4AF37',
+                  background: 'rgba(14,165,233,0.15)',
+                  border: '1px solid rgba(14,165,233,0.35)',
+                  color: '#0ea5e9',
                   padding: '0.5rem 1.1rem',
                   borderRadius: 50,
                   fontSize: '0.9rem',
@@ -162,10 +162,10 @@ export default function Footer() {
                   width: 'fit-content',
                 }}
                 onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLAnchorElement).style.background = 'rgba(212,175,55,0.28)')
+                  ((e.currentTarget as HTMLAnchorElement).style.background = 'rgba(14,165,233,0.28)')
                 }
                 onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLAnchorElement).style.background = 'rgba(212,175,55,0.15)')
+                  ((e.currentTarget as HTMLAnchorElement).style.background = 'rgba(14,165,233,0.15)')
                 }
               >
                 <MessageCircle size={16} strokeWidth={2} />
@@ -179,7 +179,7 @@ export default function Footer() {
         <div
           style={{
             height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(14,165,233,0.3), transparent)',
             marginBottom: '2rem',
           }}
         />
@@ -200,23 +200,23 @@ export default function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: '#D4AF37',
+              color: '#0ea5e9',
               fontWeight: 800,
               fontSize: '0.88rem',
               textDecoration: 'none',
               letterSpacing: '0.04em',
-              textShadow: '0 0 18px rgba(212,175,55,0.55), 0 0 40px rgba(212,175,55,0.25)',
+              textShadow: '0 0 18px rgba(14,165,233,0.55), 0 0 40px rgba(14,165,233,0.25)',
               transition: 'text-shadow 0.3s',
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLAnchorElement
               el.style.textShadow =
-                '0 0 28px rgba(212,175,55,0.9), 0 0 60px rgba(212,175,55,0.5)'
+                '0 0 28px rgba(14,165,233,0.9), 0 0 60px rgba(14,165,233,0.5)'
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLAnchorElement
               el.style.textShadow =
-                '0 0 18px rgba(212,175,55,0.55), 0 0 40px rgba(212,175,55,0.25)'
+                '0 0 18px rgba(14,165,233,0.55), 0 0 40px rgba(14,165,233,0.25)'
             }}
           >
             ✦ Infrastructure by NEXARA FMW ✦

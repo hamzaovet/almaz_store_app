@@ -12,14 +12,25 @@ import {
   ChevronLeft,
   LogOut,
   User,
+  Tags,
+  Users2,
+  Landmark,
+  MapPin,
+  Shield,
+  Briefcase
 } from 'lucide-react'
 
 const navItems = [
-  { label: 'نظرة عامة',  href: '/dashboard',          icon: LayoutDashboard },
-  { label: 'المنتجات',   href: '/dashboard/products',  icon: Package },
-  { label: 'المبيعات',   href: '/dashboard/sales',     icon: TrendingUp },
-  { label: 'التقارير',   href: '/dashboard/reports',   icon: BarChart3 },
-  { label: 'الإعدادات', href: '/dashboard/settings',  icon: Settings },
+  { label: 'نظرة عامة',    href: '/dashboard',            icon: LayoutDashboard, blockCashier: true },
+  { label: 'المبيعات',     href: '/dashboard/sales',      icon: TrendingUp },
+  { label: 'الأقسام',      href: '/dashboard/categories', icon: Tags },
+  { label: 'المنتجات',     href: '/dashboard/products',   icon: Package },
+  { label: 'الموردون',     href: '/dashboard/suppliers',  icon: Users2 },
+  { label: 'الفروع',       href: '/dashboard/branches',   icon: MapPin, blockCashier: true },
+  { label: 'الصلاحيات',    href: '/dashboard/employees',  icon: Shield, blockCashier: true },
+  { label: 'الخزنة',       href: '/dashboard/treasury',   icon: Landmark, blockCashier: true },
+  { label: 'التقارير',     href: '/dashboard/reports',    icon: BarChart3, blockCashier: true },
+  { label: 'الإعدادات',   href: '/dashboard/settings',   icon: Settings, blockCashier: true },
 ]
 
 export default function DashboardLayout({
@@ -50,7 +61,7 @@ export default function DashboardLayout({
       style={{
         display: 'flex',
         minHeight: '100dvh',
-        background: '#f4f4f6',
+        background: 'var(--bg-primary)',
         direction: 'rtl',
       }}
     >
@@ -64,7 +75,7 @@ export default function DashboardLayout({
           flexDirection: 'column',
           padding: '2rem 1rem',
           gap: '0.35rem',
-          borderLeft: '1px solid rgba(212,175,55,0.12)',
+          borderLeft: '1px solid rgba(14,165,233,0.12)',
           position: 'sticky',
           top: 0,
           height: '100dvh',
@@ -85,7 +96,7 @@ export default function DashboardLayout({
             }}
           >
             <span style={{ fontWeight: 600 }}>ألمظ</span>
-            <span style={{ color: '#D4AF37', margin: '0 0.3rem', fontWeight: 100 }}>|</span>
+            <span style={{ color: '#0ea5e9', margin: '0 0.3rem', fontWeight: 100 }}>|</span>
             استور
           </div>
           <p
@@ -93,7 +104,7 @@ export default function DashboardLayout({
               fontSize: '0.68rem',
               fontWeight: 700,
               letterSpacing: '0.18em',
-              color: '#D4AF37',
+              color: '#0ea5e9',
               textTransform: 'uppercase',
               marginBottom: '0.25rem',
             }}
@@ -106,13 +117,15 @@ export default function DashboardLayout({
 
           {/* User Profile Info */}
           {user && (
-            <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(212,175,55,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={16} color="#D4AF37" />
+            <div style={{ marginTop: '1.25rem', padding: '0.75rem', background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(14,165,233,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <User size={16} color="#0ea5e9" />
               </div>
               <div style={{ overflow: 'hidden' }}>
                 <p style={{ color: '#fff', fontSize: '0.82rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</p>
-                <p style={{ color: '#D4AF37', fontSize: '0.7rem', fontWeight: 600 }}>{user.role}</p>
+                <p style={{ color: '#0ea5e9', fontSize: '0.7rem', fontWeight: 600 }}>
+                  {user.role === 'SuperAdmin' ? 'مالك (SuperAdmin)' : user.role === 'Admin' ? 'مدير نظام (Admin)' : user.role === 'Manager' ? 'مدير فرع (Manager)' : user.role === 'Cashier' ? 'كاشير (Cashier)' : user.role}
+                </p>
               </div>
             </div>
           )}
@@ -120,6 +133,10 @@ export default function DashboardLayout({
 
         {/* Nav links */}
         {navItems.map((item) => {
+          // Security Hide for Cashiers
+          const isCashier = user?.role === 'Cashier' || user?.role === 'كاشير'
+          if (isCashier && item.blockCashier) return null
+
           const Icon = item.icon
           const active =
             item.href === '/dashboard'
@@ -139,10 +156,10 @@ export default function DashboardLayout({
                 textDecoration: 'none',
                 fontWeight: active ? 700 : 500,
                 fontSize: '0.92rem',
-                color: active ? '#D4AF37' : 'rgba(255,255,255,0.6)',
-                background: active ? 'rgba(212,175,55,0.1)' : 'transparent',
+                color: active ? '#0ea5e9' : 'rgba(255,255,255,0.6)',
+                background: active ? 'rgba(14,165,233,0.1)' : 'transparent',
                 border: active
-                  ? '1px solid rgba(212,175,55,0.22)'
+                  ? '1px solid rgba(14,165,233,0.22)'
                   : '1px solid transparent',
                 transition: 'all 0.2s',
               }}

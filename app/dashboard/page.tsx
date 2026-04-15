@@ -34,7 +34,7 @@ function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; color: string }> = {
     مكتمل:        { bg: 'rgba(34,197,94,0.1)',   color: '#22c55e' },
     'قيد التوصيل': { bg: 'rgba(99,102,241,0.1)',  color: '#6366f1' },
-    معلق:         { bg: 'rgba(212,175,55,0.1)',   color: '#D4AF37' },
+    معلق:         { bg: 'rgba(14,165,233,0.1)',   color: '#0ea5e9' },
     ملغي:         { bg: 'rgba(239,68,68,0.1)',    color: '#ef4444' },
   }
   const s = map[status] ?? { bg: '#eee', color: '#555' }
@@ -58,6 +58,10 @@ function SkeletonCard() {
       </div>
     </div>
   )
+}
+
+function fmt(n: number) {
+  return n.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 /* ─── Page ──────────────────────────────────────────────── */
@@ -103,16 +107,16 @@ export default function DashboardPage() {
     {
       id: 'revenue',
       label: 'إجمالي المبيعات',
-      value: loading || !statsData ? '—' : statsData.totalRevenue.toLocaleString('ar-EG'),
+      value: loading || !statsData ? '—' : fmt(statsData.totalRevenue),
       unit: 'ج.م',
       icon: TrendingUp,
-      color: '#D4AF37',
-      bg: 'rgba(212,175,55,0.08)',
+      color: '#0ea5e9',
+      bg: 'rgba(14,165,233,0.08)',
     },
     {
       id: 'costs',
       label: 'إجمالي التكلفة',
-      value: loading || !statsData ? '—' : statsData.totalCost.toLocaleString('ar-EG'),
+      value: loading || !statsData ? '—' : fmt(statsData.totalCost),
       unit: 'ج.م',
       icon: Package,
       color: '#F97316',
@@ -121,7 +125,7 @@ export default function DashboardPage() {
     {
       id: 'expenses',
       label: 'إجمالي المصروفات',
-      value: loading || !statsData ? '—' : statsData.totalExpenses.toLocaleString('ar-EG'),
+      value: loading || !statsData ? '—' : fmt(statsData.totalExpenses),
       unit: 'ج.م',
       icon: FileText,
       color: '#ef4444',
@@ -130,7 +134,7 @@ export default function DashboardPage() {
     {
       id: 'profit',
       label: 'صافي الربح',
-      value: loading || !statsData ? '—' : statsData.netProfit.toLocaleString('ar-EG'),
+      value: loading || !statsData ? '—' : fmt(statsData.netProfit),
       unit: 'ج.م',
       icon: Banknote,
       color: '#22c55e',
@@ -139,7 +143,7 @@ export default function DashboardPage() {
     {
       id: 'inventory-value',
       label: 'قيمة المخزون الحالي',
-      value: loading || !statsData ? '—' : statsData.totalInventoryValue.toLocaleString('ar-EG'),
+      value: loading || !statsData ? '—' : fmt(statsData.totalInventoryValue),
       unit: 'ج.م',
       icon: Archive,
       color: '#6366f1',
@@ -155,10 +159,10 @@ export default function DashboardPage() {
 
       {/* Page Header */}
       <div>
-        <h1 style={{ fontSize: '1.7rem', fontWeight: 900, color: '#1D1D1F', marginBottom: '0.25rem' }}>
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#FFFFFF', marginBottom: '0.25rem' }}>
           نظرة عامة
         </h1>
-        <p style={{ color: 'rgba(29,29,31,0.5)', fontSize: '0.9rem', minHeight: '1.4em' }}>
+        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', minHeight: '1.4em' }}>
           {mounted
             ? `مرحباً بك في لوحة تحكم ألمظ استور — ${today}`
             : 'مرحباً بك في لوحة تحكم ألمظ استور'}
@@ -178,8 +182,7 @@ export default function DashboardPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.08, duration: 0.4 }}
                   style={{
-                    background: '#FFFFFF',
-                    border: '1px solid rgba(29,29,31,0.07)',
+                    background: 'var(--bg-surface)', border: '1px solid rgba(29,29,31,0.07)',
                     borderRadius: '1.25rem',
                     padding: '1.5rem',
                     display: 'flex',
@@ -190,10 +193,10 @@ export default function DashboardPage() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <p style={{ fontSize: '0.8rem', color: 'rgba(29,29,31,0.5)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                      <p style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.6)', fontWeight: 700, marginBottom: '0.4rem' }}>
                         {s.label}
                       </p>
-                      <p style={{ fontSize: '1.75rem', fontWeight: 900, color: '#1D1D1F', lineHeight: 1, direction: 'ltr' }}>
+                      <p style={{ fontSize: '2rem', fontWeight: 900, color: '#FFFFFF', lineHeight: 1, direction: 'ltr' }}>
                         {s.value}
                         <span style={{ fontSize: '0.8rem', fontWeight: 600, marginRight: '0.3rem', color: 'rgba(29,29,31,0.45)' }}>
                           {' '}{s.unit}
@@ -215,21 +218,21 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.38, duration: 0.45 }}
-        style={{ background: '#FFFFFF', border: '1px solid rgba(29,29,31,0.07)', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 2px 14px rgba(0,0,0,0.05)' }}
+        style={{ background: 'var(--bg-surface)', border: '1px solid rgba(29,29,31,0.07)', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 2px 14px rgba(0,0,0,0.05)' }}
       >
         {/* Table header */}
         <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid rgba(29,29,31,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1D1D1F' }}>آخر المبيعات</h2>
+            <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>آخر المبيعات</h2>
             <p style={{ fontSize: '0.8rem', color: 'rgba(29,29,31,0.45)', marginTop: '0.15rem' }}>
               {loading ? 'جارٍ التحميل…' : `أحدث ${recentOrders.length} عمليات مسجّلة`}
             </p>
           </div>
           <Link
             href="/dashboard/sales"
-            style={{ border: '1px solid rgba(29,29,31,0.12)', background: 'transparent', borderRadius: 8, padding: '0.4rem 0.9rem', fontSize: '0.82rem', fontWeight: 600, color: '#1D1D1F', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s' }}
-            onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = '#1D1D1F'; el.style.color = '#fff' }}
-            onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.color = '#1D1D1F' }}
+            style={{ border: '1px solid rgba(29,29,31,0.12)', background: 'transparent', borderRadius: 8, padding: '0.4rem 0.9rem', fontSize: '0.82rem', fontWeight: 600, color: '#FFFFFF', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s' }}
+            onMouseEnter={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = '#FFFFFF'; el.style.color = '#fff' }}
+            onMouseLeave={(e) => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.color = '#FFFFFF' }}
           >
             <LinkIcon size={13} />
             عرض الكل
@@ -248,7 +251,7 @@ export default function DashboardPage() {
         {!loading && recentOrders.length === 0 && (
           <div style={{ padding: '3rem', textAlign: 'center', color: 'rgba(29,29,31,0.35)' }}>
             لا توجد مبيعات بعد — سجّل أول عملية من صفحة{' '}
-            <Link href="/dashboard/sales" style={{ color: '#D4AF37', fontWeight: 700 }}>المبيعات</Link>
+            <Link href="/dashboard/sales" style={{ color: '#0ea5e9', fontWeight: 700 }}>المبيعات</Link>
           </div>
         )}
 
@@ -273,16 +276,16 @@ export default function DashboardPage() {
                     onMouseEnter={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = '#FAFAFA')}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLTableRowElement).style.background = 'transparent')}
                   >
-                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', fontWeight: 700, color: '#D4AF37', whiteSpace: 'nowrap', direction: 'ltr' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.8rem', fontWeight: 700, color: '#0ea5e9', whiteSpace: 'nowrap', direction: 'ltr' }}>
                       #{String(i + 1).padStart(4, '0')}
                     </td>
-                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: 600, color: '#1D1D1F', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap' }}>
                       {sale.customer}
                     </td>
                     <td style={{ padding: '1rem 1.5rem', fontSize: '0.88rem', color: 'rgba(29,29,31,0.65)', whiteSpace: 'nowrap' }}>
                       {sale.productName}
                     </td>
-                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: 800, color: '#1D1D1F', whiteSpace: 'nowrap', direction: 'ltr' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: 800, color: '#FFFFFF', whiteSpace: 'nowrap', direction: 'ltr' }}>
                       {(sale.total ?? sale.price * sale.qty).toLocaleString('ar-EG')} ج.م
                     </td>
                     <td style={{ padding: '1rem 1.5rem', fontSize: '0.88rem', color: 'rgba(29,29,31,0.6)', textAlign: 'center' }}>
@@ -307,11 +310,11 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.45 }}
-        style={{ background: '#FFFFFF', border: '1px solid rgba(29,29,31,0.07)', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 2px 14px rgba(0,0,0,0.05)' }}
+        style={{ background: 'var(--bg-surface)', border: '1px solid rgba(29,29,31,0.07)', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 2px 14px rgba(0,0,0,0.05)' }}
       >
         <div style={{ padding: '1.25rem 1.75rem', borderBottom: '1px solid rgba(29,29,31,0.07)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1D1D1F' }}>المخزون الحالي</h2>
-          <Link href="/dashboard/products" style={{ fontSize: '0.82rem', fontWeight: 600, color: '#D4AF37', textDecoration: 'none' }}>
+          <h2 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF' }}>المخزون الحالي</h2>
+          <Link href="/dashboard/products" style={{ fontSize: '0.82rem', fontWeight: 600, color: '#0ea5e9', textDecoration: 'none' }}>
             إدارة المنتجات ←
           </Link>
         </div>
@@ -326,7 +329,7 @@ export default function DashboardPage() {
         {!loading && products.length === 0 && (
           <div style={{ padding: '2.5rem', textAlign: 'center', color: 'rgba(29,29,31,0.35)' }}>
             لا توجد منتجات بعد —{' '}
-            <Link href="/dashboard/products" style={{ color: '#D4AF37', fontWeight: 700 }}>أضف منتجاً</Link>
+            <Link href="/dashboard/products" style={{ color: '#0ea5e9', fontWeight: 700 }}>أضف منتجاً</Link>
           </div>
         )}
 
@@ -340,18 +343,18 @@ export default function DashboardPage() {
                 onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}
               >
                 <div>
-                  <p style={{ fontWeight: 700, fontSize: '0.92rem', color: '#1D1D1F' }}>{p.name}</p>
+                  <p style={{ fontWeight: 700, fontSize: '0.92rem', color: '#FFFFFF' }}>{p.name}</p>
                   <p style={{ fontSize: '0.78rem', color: 'rgba(29,29,31,0.45)', marginTop: '0.1rem' }}>
                     {p.category}
                     {p.badge && (
-                      <span style={{ marginRight: '0.4rem', background: 'rgba(212,175,55,0.1)', color: '#D4AF37', padding: '0.1rem 0.45rem', borderRadius: 50, fontSize: '0.68rem', fontWeight: 700 }}>
+                      <span style={{ marginRight: '0.4rem', background: 'rgba(14,165,233,0.1)', color: '#0ea5e9', padding: '0.1rem 0.45rem', borderRadius: 50, fontSize: '0.68rem', fontWeight: 700 }}>
                         {p.badge}
                       </span>
                     )}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#D4AF37', direction: 'ltr' }}>
+                  <span style={{ fontSize: '1rem', fontWeight: 800, color: '#0ea5e9', direction: 'ltr' }}>
                     {p.price.toLocaleString('ar-EG')} ج.م
                   </span>
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: p.stock > 10 ? '#22c55e' : '#f59e0b', minWidth: 70, textAlign: 'center' }}>

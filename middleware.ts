@@ -19,6 +19,26 @@ export async function middleware(request: NextRequest) {
       }
       
       // Successfully authenticated
+      const role = payload.role as string
+
+      // Cashier Security Lock
+      if (role === 'Cashier' || role === 'كاشير') {
+        const path = request.nextUrl.pathname
+        const blockedPaths = [
+          '/dashboard/reports', 
+          '/dashboard/treasury', 
+          '/dashboard/expenses', 
+          '/dashboard/employees', 
+          '/dashboard/settings',
+          '/dashboard/branches'
+        ]
+        
+        if (blockedPaths.some(bp => path.startsWith(bp))) {
+          // Block access and redirect them exactly to where they belong
+          return NextResponse.redirect(new URL('/dashboard/sales', request.url))
+        }
+      }
+
       const res = NextResponse.next()
       res.headers.set('x-user-data', JSON.stringify(payload))
       return res

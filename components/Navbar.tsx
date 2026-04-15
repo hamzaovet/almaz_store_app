@@ -56,11 +56,11 @@ export default function Navbar() {
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        background: scrolled ? 'rgba(255,255,255,0.93)' : '#FFFFFF',
+        background: scrolled ? 'rgba(10,10,10,0.93)' : '#0a0a0a',
         backdropFilter: scrolled ? 'blur(18px)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(18px)' : 'none',
         borderBottom: scrolled
-          ? '1px solid rgba(212,175,55,0.15)'
+          ? '1px solid rgba(14,165,233,0.15)'
           : '1px solid transparent',
         transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
       }}
@@ -100,16 +100,16 @@ export default function Navbar() {
                 style={{
                   fontSize: '0.97rem',
                   fontWeight: 600,
-                  color: '#1D1D1F',
+                  color: '#FFFFFF',
                   textDecoration: 'none',
                   transition: 'color 0.2s',
                   whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLAnchorElement).style.color = '#D4AF37'
+                  ;(e.currentTarget as HTMLAnchorElement).style.color = '#0ea5e9'
                 }}
                 onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLAnchorElement).style.color = '#1D1D1F'
+                  ;(e.currentTarget as HTMLAnchorElement).style.color = '#FFFFFF'
                 }}
               >
                 {l.label}
@@ -146,7 +146,7 @@ export default function Navbar() {
               fontSize: '1.5rem',
               fontWeight: 300,
               letterSpacing: '0.16em',
-              color: '#1D1D1F',
+              color: '#FFFFFF',
               whiteSpace: 'nowrap',
               lineHeight: 1,
             }}
@@ -155,7 +155,7 @@ export default function Navbar() {
 
             <span
               style={{
-                color: '#D4AF37',
+                color: '#0ea5e9',
                 margin: '0 0.45rem',
                 fontSize: '1.8rem',
                 fontWeight: 100,
@@ -174,7 +174,7 @@ export default function Navbar() {
                   height: 22,
                   margin: '0 2px',
                   strokeWidth: 1.5,
-                  color: '#1D1D1F',
+                  color: '#FFFFFF',
                   flexShrink: 0,
                   position: 'relative',
                   top: 1,
@@ -203,14 +203,14 @@ export default function Navbar() {
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              background: '#D4AF37',
+              background: '#0ea5e9',
               color: '#fff',
               fontWeight: 700,
               fontSize: '0.9rem',
               padding: '0.48rem 1.15rem',
               borderRadius: 50,
               textDecoration: 'none',
-              boxShadow: '0 4px 18px rgba(212,175,55,0.35)',
+              boxShadow: '0 4px 18px rgba(14,165,233,0.35)',
               transition: 'transform 0.2s, box-shadow 0.2s',
               whiteSpace: 'nowrap',
               direction: 'ltr',
@@ -218,12 +218,12 @@ export default function Navbar() {
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLAnchorElement
               el.style.transform = 'translateY(-2px)'
-              el.style.boxShadow = '0 8px 26px rgba(212,175,55,0.52)'
+              el.style.boxShadow = '0 8px 26px rgba(14,165,233,0.52)'
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLAnchorElement
               el.style.transform = 'translateY(0)'
-              el.style.boxShadow = '0 4px 18px rgba(212,175,55,0.35)'
+              el.style.boxShadow = '0 4px 18px rgba(14,165,233,0.35)'
             }}
           >
             <MessageCircle size={17} strokeWidth={2.2} style={{ flexShrink: 0 }} />
@@ -239,7 +239,7 @@ export default function Navbar() {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: '#1D1D1F',
+              color: '#FFFFFF',
               display: 'none',
               padding: 4,
             }}
@@ -253,8 +253,8 @@ export default function Navbar() {
       {open && (
         <div
           style={{
-            background: '#fff',
-            borderTop: '1px solid rgba(212,175,55,0.14)',
+            background: '#111111',
+            borderTop: '1px solid rgba(14,165,233,0.14)',
             padding: '1.25rem 2rem 1.5rem',
           }}
         >
@@ -268,7 +268,7 @@ export default function Navbar() {
                 padding: '0.7rem 0',
                 fontSize: '1.05rem',
                 fontWeight: 600,
-                color: '#1D1D1F',
+                color: '#FFFFFF',
                 textDecoration: 'none',
                 borderBottom: '1px solid rgba(0,0,0,0.05)',
               }}
@@ -286,7 +286,7 @@ export default function Navbar() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.4rem',
-              background: '#D4AF37',
+              background: '#0ea5e9',
               color: '#fff',
               fontWeight: 700,
               fontSize: '0.92rem',

@@ -1,22 +1,30 @@
-import mongoose from 'mongoose'
+import mongoose, { Schema, Document, Model } from 'mongoose'
 
-export interface IUser extends mongoose.Document {
+export interface IUser extends Document {
   name: string
-  email: string
   username: string
   password?: string
-  role: 'مدير' | 'كاشير'
+  role: 'SuperAdmin' | 'Admin' | 'Manager' | 'Cashier'
+  branchId?: mongoose.Types.ObjectId | string
+  createdAt: Date
+  updatedAt: Date
 }
 
-const userSchema = new mongoose.Schema<IUser>(
+const userSchema = new Schema<IUser>(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    name:     { type: String, required: true },
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['مدير', 'كاشير'], default: 'كاشير' },
+    role:     { type: String, enum: ['SuperAdmin', 'Admin', 'Manager', 'Cashier'], default: 'Cashier' },
+    branchId: { type: Schema.Types.ObjectId, ref: 'Branch', required: false },
   },
   { timestamps: true }
 )
 
-export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema)
+// Clear stale cached model in dev so schema changes take effect immediately
+if (process.env.NODE_ENV === 'development') {
+  delete (mongoose.models as any).User
+}
+
+export const User: Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>('User', userSchema)

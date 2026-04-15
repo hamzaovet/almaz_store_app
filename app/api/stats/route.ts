@@ -13,8 +13,8 @@ export async function GET() {
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: "$total" },
-            totalCost: { $sum: { $multiply: ["$costAtSale", "$qty"] } },
+            totalRevenue: { $sum: "$totalSalePrice" },
+            totalCost:    { $sum: "$totalCost" },
             totalSalesCount: { $sum: 1 },
           }
         }

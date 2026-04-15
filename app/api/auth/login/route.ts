@@ -17,16 +17,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'إسم المستخدم أو كلمة المرور غير صحيحة' }, { status: 401 })
     }
 
-    const isMatch = await comparePassword(password, user.password)
+    const isMatch = await comparePassword(password, user.password as string)
     if (!isMatch) {
       return NextResponse.json({ error: 'إسم المستخدم أو كلمة المرور غير صحيحة' }, { status: 401 })
     }
+
+    let mappedRole = user.role
+    if ((mappedRole as any) === 'مدير') mappedRole = 'Admin'
+    if ((mappedRole as any) === 'كاشير') mappedRole = 'Cashier'
 
     const payload = {
       sub: user._id.toString(),
       username: user.username,
       name: user.name,
-      role: user.role,
+      role: mappedRole,
     }
     const token = generateToken(payload, '7d')
 

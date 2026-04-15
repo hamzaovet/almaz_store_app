@@ -1,28 +1,32 @@
 @import "tailwindcss";
 
-/* ── Almaz Premium Design Tokens ───────────────────────────── */
+/* ── Almaz Premium Semantic Design Tokens ───────────────────────────── */
 :root {
-  --white:   #FFFFFF;
-  --slate:   #1D1D1F;
-  --gold:    #D4AF37;
-  --gold-dim: #a88a1c;
-  --dark:    #0a0a0c;
-  --dark-2:  #111114;
-  --dark-3:  #18181c;
-  --orange:  #F97316;
-  --glass:   rgba(255,255,255,0.06);
-  --glass-border: rgba(212,175,55,0.18);
+  --bg-primary:    #0a0a0a;
+  --bg-surface:    #111111;
+  --bg-surface-hover: #161616;
+  --bg-card:       #141414;
+  --text-primary:  #ededed;
+  --text-secondary:#a1a1aa;
+  --text-tertiary: #71717a;
+  --accent-cyan:   #0ea5e9;
+  --accent-cyan-dim:   #0284c7;
+  --border-light:  rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --danger-red:    #ef4444;
+  --success-green: #22c55e;
+  --warning-orange:#f59e0b;
+  --glass:         rgba(255, 255, 255, 0.03);
 }
 
 @theme inline {
-  --color-white:   var(--white);
-  --color-slate:   var(--slate);
-  --color-gold:    var(--gold);
-  --color-dark:    var(--dark);
-  --color-orange:  var(--orange);
-  --color-background: var(--white);
-  --color-foreground: var(--slate);
-  --font-cairo:    var(--font-cairo);
+  --color-bg-primary:    var(--bg-primary);
+  --color-bg-surface:    var(--bg-surface);
+  --color-text-primary:  var(--text-primary);
+  --color-text-secondary:var(--text-secondary);
+  --color-accent-cyan:   var(--accent-cyan);
+  --font-arabic:         var(--font-ibm-arabic);
+  --font-sans:           var(--font-inter);
 }
 
 /* ── Base Reset ─────────────────────────────────────────────── */
@@ -33,16 +37,16 @@
 }
 
 html {
-  background: var(--white);
-  color: var(--slate);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   direction: rtl;
   scroll-behavior: smooth;
 }
 
 body {
-  font-family: var(--font-cairo), 'Cairo', 'Segoe UI', system-ui, sans-serif;
-  background: var(--white);
-  color: var(--slate);
+  font-family: var(--font-ibm-arabic), var(--font-sans), system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -52,23 +56,31 @@ body {
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--dark); }
-::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
 
-/* ── Gold Glow Helper ──────────────────────────────────────── */
-.glow-gold {
-  text-shadow: 0 0 18px rgba(212, 175, 55, 0.55), 0 0 40px rgba(212, 175, 55, 0.25);
+/* ── Forms & AutoFill ──────────────────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active{
+  -webkit-box-shadow: 0 0 0 5000px #0a0a0a inset !important;
+  -webkit-text-fill-color: #ededed !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
-.glow-orange {
-  text-shadow: 0 0 18px rgba(249, 115, 22, 0.55), 0 0 40px rgba(249, 115, 22, 0.25);
+
+/* ── UI Helpers ──────────────────────────────────────── */
+.glow-cyan {
+  text-shadow: 0 0 16px rgba(14, 165, 233, 0.5), 0 0 35px rgba(14, 165, 233, 0.2);
 }
 
 /* ── Glass Card ────────────────────────────────────────────── */
 .glass-card {
   background: var(--glass);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
 
 /* ── Sonar Ring Keyframes ──────────────────────────────────── */
@@ -83,4 +95,71 @@ body {
 @keyframes float-in {
   from { opacity: 0; transform: translateY(12px) scale(0.9); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Print Media Query ──────────────────────────────────────── */
+@media print {
+  /* Set exact white background and black text for crisp printing */
+  html, body {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  /* Hide navigation, sidebar, and non-printable elements */
+  aside, 
+  nav,
+  header:not(.print-header),
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Allow main content container to take full width and avoid scrolling constraints */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    flex: none !important;
+    width: 100% !important;
+    display: block !important;
+  }
+
+  /* Ensure the report container has no max-width boundaries and clean backgrounds */
+  #printable-report, 
+  #printable-report * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    border-color: #e5e7eb !important;
+  }
+
+  /* Make tables display correctly with page-break controls */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    page-break-inside: auto !important;
+  }
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+  th, td {
+    border: 1px solid #d1d5db !important;
+    padding: 8px !important;
+    color: black !important;
+    background: transparent !important;
+  }
+  th {
+    background: #f3f4f6 !important;
+    color: black !important;
+    font-weight: bold !important;
+  }
+
+  /* KPI Cards printing fixes */
+  .kpi-card {
+    border: 1px solid #d1d5db !important;
+    break-inside: avoid !important;
+  }
 }

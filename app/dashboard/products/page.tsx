@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, X, Package, Search, Upload, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Package, Search, Upload, Loader2, Scan } from 'lucide-react'
+import { ImeiScanner } from '@/components/dashboard/ImeiScanner'
 
 const IMGBB_KEY = '1705736b8f2b46dcbaeec8a6025aca83'
 
@@ -15,7 +16,17 @@ type Product = {
   stock: number
   specs?: string
   imageUrl?: string
+  categoryId?: {_id: string, name: string} | string
+  supplierId?: {_id: string, name: string} | string
+  condition?: string
+  branchId?: string | any
+  ownershipType?: 'Owned' | 'Consignment' | string
+  isSerialized?: boolean
   badge?: string
+  serialNumber?: string
+  storage?: string
+  color?: string
+  batteryHealth?: string
 }
 
 /* ─── Form state — includes _id so edit path always has it ─── */
@@ -29,6 +40,17 @@ type FormState = {
   specs:    string
   badge:    string
   imageUrl: string
+  categoryId: string
+  condition: string
+  serialNumber: string
+  storage: string
+  color: string
+  batteryHealth: string
+  supplierName: string
+  supplierId: string
+  isSerialized: boolean
+  branchId: string
+  ownershipType: 'Owned' | 'Consignment'
 }
 
 const blankForm: FormState = {
@@ -41,6 +63,17 @@ const blankForm: FormState = {
   specs:    '',
   badge:    '',
   imageUrl: '',
+  categoryId: '',
+  condition: 'New',
+  serialNumber: '',
+  storage: '',
+  color: '',
+  batteryHealth: '',
+  supplierName: '',
+  supplierId: '',
+  isSerialized: true,
+  branchId: '',
+  ownershipType: 'Owned',
 }
 
 /* ─── Page ──────────────────────────────────────────────────── */
@@ -48,7 +81,11 @@ export default function ProductsPage() {
   const [items, setItems]           = useState<Product[]>([])
   const [loading, setLoading]       = useState(true)
   const [modal, setModal]           = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
   const [isEditing, setIsEditing]   = useState(false)
+  const [dbCategories, setDbCategories] = useState<{_id: string, name: string}[]>([])
+  const [dbSuppliers, setDbSuppliers]   = useState<{_id: string, name: string}[]>([])
+  const [dbBranches, setDbBranches]     = useState<{_id: string, name: string}[]>([])
 
   // Single unified form state with _id
   const [form, setForm]             = useState<FormState>(blankForm)
@@ -68,11 +105,22 @@ export default function ProductsPage() {
   async function fetchProducts() {
     setLoading(true)
     try {
-      const res  = await fetch('/api/products')
-      const data = await res.json()
-      setItems(data.products ?? [])
+      const [resP, resC, resS, resB] = await Promise.all([
+        fetch('/api/products'),
+        fetch('/api/categories'),
+        fetch('/api/suppliers'),
+        fetch('/api/branches'),
+      ])
+      const dataP = await resP.json()
+      const dataC = await resC.json()
+      const dataS = await resS.json()
+      const dataB = await resB.json()
+      setItems(dataP.products ?? [])
+      setDbCategories(dataC.categories ?? [])
+      setDbSuppliers(dataS.suppliers ?? [])
+      setDbBranches(dataB.branches ?? [])
     } catch {
-      showToast('فشل تحميل المنتجات', 'err')
+      showToast('فشل تحميل البيانات', 'err')
     } finally {
       setLoading(false)
     }
@@ -106,6 +154,17 @@ export default function ProductsPage() {
       specs:    p.specs    ?? '',
       badge:    p.badge    ?? '',
       imageUrl: p.imageUrl ?? '',
+      categoryId: typeof p.categoryId === 'string' ? p.categoryId : p.categoryId?._id ?? '',
+      condition: p.condition ?? 'New',
+      serialNumber: p.serialNumber ?? '',
+      storage: p.storage ?? '',
+      color: p.color ?? '',
+      batteryHealth: p.batteryHealth ?? '',
+      supplierName: '',
+      supplierId: typeof p.supplierId === 'string' ? p.supplierId : p.supplierId?._id ?? '',
+      isSerialized: p.isSerialized ?? false,
+      branchId: typeof p.branchId === 'string' ? p.branchId : p.branchId?._id ?? '',
+      ownershipType: (p.ownershipType as any) || 'Owned',
     })
     setImageFile(null)
     setPreview(p.imageUrl ?? '')
@@ -154,6 +213,16 @@ export default function ProductsPage() {
           specs:    form.specs.trim(),
           badge:    form.badge.trim(),
           imageUrl: imageUrl.trim(),
+          categoryId: form.categoryId,
+          condition: form.condition,
+          serialNumber: form.serialNumber.trim(),
+          storage: form.storage.trim(),
+          color: form.color.trim(),
+          batteryHealth: form.batteryHealth.trim(),
+          supplierId: form.supplierId || undefined,
+          isSerialized: form.isSerialized,
+          branchId: form.branchId || undefined,
+          ownershipType: form.ownershipType,
         }
 
         const res  = await fetch('/api/products', {
@@ -178,6 +247,16 @@ export default function ProductsPage() {
           specs:    form.specs.trim()    || undefined,
           badge:    form.badge.trim()    || undefined,
           imageUrl: imageUrl.trim()      || undefined,
+          categoryId: form.categoryId,
+          condition: form.condition,
+          serialNumber: form.serialNumber.trim() || undefined,
+          storage: form.storage.trim() || undefined,
+          color: form.color.trim() || undefined,
+          batteryHealth: form.batteryHealth.trim() || undefined,
+          supplierId: form.supplierId || undefined,
+          isSerialized: form.isSerialized,
+          branchId: form.branchId || undefined,
+          ownershipType: form.ownershipType,
         }
 
         const res  = await fetch('/api/products', {
@@ -214,6 +293,48 @@ export default function ProductsPage() {
     }
   }
 
+  /* ── The Magic Function (Smart Radar Decode) ──────────────── */
+  function decodeImeiMock(imei: string) {
+    let mockName = 'هاتف ذكي غير معروف'
+    let mockStorage = '128GB'
+    let mockColor = 'أسود'
+
+    if (imei.startsWith('356')) {
+      mockName = 'iPhone 11'
+      mockColor = 'أبيض'
+    } else if (imei.startsWith('359')) {
+      mockName = 'iPhone 14 Pro Max'
+      mockStorage = '256GB'
+      mockColor = 'بنفسجي عميق'
+    } else if (imei.startsWith('354')) {
+      mockName = 'Samsung Galaxy S23 Ultra'
+      mockStorage = '512GB'
+      mockColor = 'أخضر'
+    }
+
+    return { mockName, mockStorage, mockColor }
+  }
+
+  function handleScan(serial: string) {
+    setShowScanner(false)
+    const { mockName, mockStorage, mockColor } = decodeImeiMock(serial)
+
+    // Automatically map Category UI (Assume we select 'موبايلات' blindly for demonstration)
+    const categoryMobile = dbCategories.find(c => c.name === 'موبايلات')
+
+    setForm(prev => ({
+      ...prev,
+      serialNumber: serial,
+      name: prev.name || mockName,
+      storage: mockStorage,
+      color: mockColor,
+      categoryId: categoryMobile ? categoryMobile._id : prev.categoryId,
+      category: categoryMobile ? categoryMobile.name : prev.category,
+    }))
+    
+    showToast(`تم فحص السيريال بنجاح: ${serial}`, 'ok')
+  }
+
   /* ── Derived ──────────────────────────────────────────────── */
   const filtered = items.filter(
     (p) => p.name.includes(search) || p.category.includes(search)
@@ -227,7 +348,7 @@ export default function ProductsPage() {
   const inp: React.CSSProperties = {
     width: '100%', padding: '0.65rem 0.9rem',
     border: '1px solid rgba(29,29,31,0.14)', borderRadius: 10,
-    fontSize: '0.92rem', fontFamily: 'inherit', color: '#1D1D1F',
+    fontSize: '0.92rem', fontFamily: 'inherit', color: '#FFFFFF',
     outline: 'none', background: '#fafafa', boxSizing: 'border-box',
   }
   const lbl: React.CSSProperties = {
@@ -252,11 +373,11 @@ export default function ProductsPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#D4AF37', textTransform: 'uppercase', marginBottom: '0.3rem' }}>المستودع</p>
-          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#1D1D1F' }}>إدارة المنتجات والأقسام</h1>
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', color: '#0ea5e9', textTransform: 'uppercase', marginBottom: '0.3rem' }}>المستودع</p>
+          <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#FFFFFF' }}>إدارة المنتجات والأقسام</h1>
           <p style={{ color: 'rgba(29,29,31,0.5)', fontSize: '0.88rem', marginTop: '0.2rem' }}>{items.length} منتج في المخزون</p>
         </div>
-        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#D4AF37', color: '#fff', border: 'none', borderRadius: 12, padding: '0.72rem 1.4rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 18px rgba(212,175,55,0.35)' }}>
+        <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 12, padding: '0.72rem 1.4rem', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 18px rgba(14,165,233,0.35)' }}>
           <Plus size={18} strokeWidth={2.5} />
           إضافة منتج جديد
         </button>
@@ -285,7 +406,7 @@ export default function ProductsPage() {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid rgba(212,175,55,0.15)' }}>
+              <tr style={{ borderBottom: '2px solid rgba(14,165,233,0.15)' }}>
                 {['#', 'المنتج', 'القسم', 'السعر', 'المخزون', 'الحالة', 'إجراءات'].map((h) => (
                   <th key={h} style={{ padding: '0.85rem 1rem', textAlign: 'right', fontWeight: 700, color: 'rgba(29,29,31,0.5)', fontSize: '0.78rem', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
@@ -301,15 +422,15 @@ export default function ProductsPage() {
                   <td style={{ padding: '0.9rem 1rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       {p.imageUrl
-                        ? <img src={p.imageUrl} alt={p.name} style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(212,175,55,0.2)' }} />
-                        : <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Package size={16} color="#D4AF37" strokeWidth={1.8} /></div>
+                        ? <img src={p.imageUrl} alt={p.name} style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover', border: '1px solid rgba(14,165,233,0.2)' }} />
+                        : <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Package size={16} color="#0ea5e9" strokeWidth={1.8} /></div>
                       }
-                      <div style={{ fontWeight: 700, color: '#1D1D1F', whiteSpace: 'nowrap' }}>{p.name}</div>
+                      <div style={{ fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap' }}>{p.name}</div>
                     </div>
                   </td>
                   <td style={{ padding: '0.9rem 1rem', color: 'rgba(29,29,31,0.6)' }}>{p.category}</td>
-                  <td style={{ padding: '0.9rem 1rem', fontWeight: 700, color: '#D4AF37', direction: 'ltr' }}>{Number(p.price).toLocaleString('ar-EG')} ج.م</td>
-                  <td style={{ padding: '0.9rem 1rem', fontWeight: 600, color: '#1D1D1F' }}>{p.stock}</td>
+                  <td style={{ padding: '0.9rem 1rem', fontWeight: 700, color: '#0ea5e9', direction: 'ltr' }}>{Number(p.price).toLocaleString('ar-EG')} ج.م</td>
+                  <td style={{ padding: '0.9rem 1rem', fontWeight: 600, color: '#FFFFFF' }}>{p.stock}</td>
                   <td style={{ padding: '0.9rem 1rem' }}>
                     <span style={{ padding: '0.25rem 0.7rem', borderRadius: 50, fontSize: '0.72rem', fontWeight: 700, background: p.stock > 10 ? 'rgba(34,197,94,0.1)' : 'rgba(245,158,11,0.1)', color: p.stock > 10 ? '#16a34a' : '#d97706' }}>
                       {p.stock > 10 ? 'متوفر' : 'كمية محدودة'}
@@ -317,7 +438,7 @@ export default function ProductsPage() {
                   </td>
                   <td style={{ padding: '0.9rem 1rem' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => openEdit(p)} style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.22)', borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#D4AF37', display: 'flex', alignItems: 'center' }}><Pencil size={14} /></button>
+                      <button onClick={() => openEdit(p)} style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.22)', borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#0ea5e9', display: 'flex', alignItems: 'center' }}><Pencil size={14} /></button>
                       <button onClick={() => setDeleteId(p._id!)} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', borderRadius: 8, padding: '0.4rem 0.6rem', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center' }}><Trash2 size={14} /></button>
                     </div>
                   </td>
@@ -341,31 +462,48 @@ export default function ProductsPage() {
 
             {/* Modal header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontWeight: 900, fontSize: '1.2rem', color: '#1D1D1F' }}>
+              <h2 style={{ fontWeight: 900, fontSize: '1.2rem', color: '#FFFFFF' }}>
                 {isEditing ? 'تعديل المنتج' : 'إضافة منتج جديد'}
               </h2>
-              <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1D1D1F' }}><X size={22} /></button>
+              <button onClick={() => setModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFFFFF' }}><X size={22} /></button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+              {/* Scan Trigger inside Modal at Top */}
+              <button
+                onClick={(e) => { e.preventDefault(); setShowScanner(true); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem',
+                  padding: '1.2rem', background: 'rgba(14,165,233,0.1)', color: '#0ea5e9',
+                  borderRadius: 14, border: '1px dashed #0ea5e9', fontWeight: 800,
+                  fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(14,165,233,0.18)')}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(14,165,233,0.1)')}
+              >
+                <Scan size={20} strokeWidth={2.5} />
+                مسح Barcode / IMEI الذكي
+              </button>
 
               {/* Image upload */}
               {field(<>
                 <label style={lbl}>صورة المنتج</label>
                 <div
                   onClick={() => fileRef.current?.click()}
-                  style={{ border: '2px dashed rgba(212,175,55,0.35)', borderRadius: 12, padding: '1.25rem', textAlign: 'center', cursor: 'pointer', background: '#fafafa', position: 'relative', minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                  style={{ border: '2px dashed rgba(14,165,233,0.35)', borderRadius: 12, padding: '1.25rem', textAlign: 'center', cursor: 'pointer', background: '#fafafa', position: 'relative', minHeight: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
                   {imagePreview
                     ? <img src={imagePreview} alt="preview" style={{ maxHeight: 120, maxWidth: '100%', borderRadius: 8, objectFit: 'contain' }} />
                     : (<>
-                        <Upload size={24} color="#D4AF37" />
+                        <Upload size={24} color="#0ea5e9" />
                         <span style={{ fontSize: '0.82rem', color: 'rgba(29,29,31,0.5)' }}>اضغط لاختيار صورة</span>
                         <span style={{ fontSize: '0.72rem', color: 'rgba(29,29,31,0.35)' }}>سيتم رفعها على ImgBB</span>
                       </>)
                   }
                   {uploading && (
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700, color: '#D4AF37' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.85)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700, color: '#0ea5e9' }}>
                       <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> جارٍ الرفع…
                     </div>
                   )}
@@ -450,14 +588,88 @@ export default function ProductsPage() {
               {field(<>
                 <label style={lbl}>القسم</label>
                 <select
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  value={form.categoryId}
+                  onChange={(e) => setForm({ ...form, categoryId: e.target.value, category: e.target.options[e.target.selectedIndex].text })}
                   style={inp}
                 >
-                  {['موبايلات', 'تابلت', 'اكسسوارات', 'لابتوب'].map((c) => (
-                    <option key={c}>{c}</option>
+                  <option value="">اختر القسم...</option>
+                  {dbCategories.map((c) => (
+                    <option key={c._id} value={c._id}>{c.name}</option>
                   ))}
                 </select>
+              </>)}
+
+              {/* الحالة */}
+              {field(<>
+                <label style={lbl}>حالة المنتج</label>
+                <select
+                  value={form.condition}
+                  onChange={(e) => setForm({ ...form, condition: e.target.value })}
+                  style={inp}
+                >
+                  <option value="New">جديد (New)</option>
+                  <option value="Used">مستعمل (Used)</option>
+                </select>
+              </>)}
+
+              {/* Serial Number & Hardware Specs */}
+              {field(<>
+                <label style={lbl}>IMEI / السيريال</label>
+                <input type="text" placeholder="e.g. 3561234567" value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} style={{...inp, direction: 'ltr'}} />
+              </>)}
+              {field(<>
+                <label style={lbl}>سعة التخزين (Storage)</label>
+                <input type="text" placeholder="128GB" value={form.storage} onChange={(e) => setForm({ ...form, storage: e.target.value })} style={{...inp, direction: 'ltr'}} />
+              </>)}
+              {field(<>
+                <label style={lbl}>اللون (Color)</label>
+                <input type="text" placeholder="أسود" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} style={inp} />
+              </>)}
+              {field(<>
+                <label style={lbl}>صحة البطارية (Battery Health)</label>
+                <input type="text" placeholder="95%" value={form.batteryHealth} onChange={(e) => setForm({ ...form, batteryHealth: e.target.value })} style={{...inp, direction: 'ltr'}} />
+              </>)}
+              {field(<>
+                <label style={lbl}>المورد (Supplier)</label>
+                <select value={form.supplierId} onChange={(e) => setForm({ ...form, supplierId: e.target.value })} style={inp}>
+                  <option value="">لا يوجد مورد — اختري...</option>
+                  {dbSuppliers.map((s) => (
+                    <option key={s._id} value={s._id}>{s.name}</option>
+                  ))}
+                </select>
+              </>)}
+              {field(<>
+                <label style={lbl}>نوع الملكية</label>
+                <select value={form.ownershipType} onChange={(e) => setForm({ ...form, ownershipType: e.target.value as any })} style={inp}>
+                  <option value="Owned">مملوك (للمتجر)</option>
+                  <option value="Consignment">بضاعة أمانة</option>
+                </select>
+              </>)}
+              {field(<>
+                <label style={lbl}>الفرع / الموقع (Location)</label>
+                <select value={form.branchId} onChange={(e) => setForm({ ...form, branchId: e.target.value })} style={inp}>
+                  <option value="">المتجر الرئيسي (افتراضي)</option>
+                  {dbBranches.map(loc => (
+                    <option key={loc._id} value={loc._id}>{loc.name}</option>
+                  ))}
+                </select>
+              </>)}
+              {field(<>
+                <label style={lbl}>نوع السيريال
+                  <small style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 500, marginRight: '0.35rem' }}>(هل الجهاز مسلسل IMEI?)</small>
+                </label>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  {[true, false].map(val => (
+                    <button
+                      key={String(val)}
+                      type="button"
+                      onClick={() => setForm({ ...form, isSerialized: val })}
+                      style={{ flex: 1, padding: '0.6rem', borderRadius: 10, fontFamily: 'inherit', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', border: form.isSerialized === val ? '2px solid #0ea5e9' : '2px solid rgba(255,255,255,0.1)', background: form.isSerialized === val ? 'rgba(14,165,233,0.12)' : 'rgba(255,255,255,0.03)', color: form.isSerialized === val ? '#0ea5e9' : 'rgba(255,255,255,0.45)' }}
+                    >
+                      {val ? 'مسلسل (IMEI)' : 'كمية (اكسسوار)'}
+                    </button>
+                  ))}
+                </div>
               </>)}
 
             </div>
@@ -467,7 +679,7 @@ export default function ProductsPage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                style={{ flex: 1, background: '#D4AF37', color: '#fff', border: 'none', borderRadius: 12, padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: saving ? 0.75 : 1 }}
+                style={{ flex: 1, background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 12, padding: '0.8rem', fontWeight: 700, fontSize: '0.95rem', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', opacity: saving ? 0.75 : 1 }}
               >
                 {saving
                   ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> جارٍ الحفظ…</>
@@ -475,7 +687,7 @@ export default function ProductsPage() {
               </button>
               <button
                 onClick={() => setModal(false)}
-                style={{ flex: 1, background: 'rgba(29,29,31,0.06)', color: '#1D1D1F', border: 'none', borderRadius: 12, padding: '0.8rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ flex: 1, background: 'rgba(29,29,31,0.06)', color: '#FFFFFF', border: 'none', borderRadius: 12, padding: '0.8rem', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 إلغاء
               </button>
@@ -491,14 +703,22 @@ export default function ProductsPage() {
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
               <Trash2 size={24} color="#dc2626" />
             </div>
-            <h3 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1D1D1F', marginBottom: '0.5rem' }}>تأكيد الحذف</h3>
+            <h3 style={{ fontWeight: 800, fontSize: '1.05rem', color: '#FFFFFF', marginBottom: '0.5rem' }}>تأكيد الحذف</h3>
             <p style={{ color: 'rgba(29,29,31,0.5)', fontSize: '0.88rem', marginBottom: '1.5rem' }}>هل أنت متأكد؟ لا يمكن التراجع.</p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button onClick={() => handleDelete(deleteId)} style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 10, padding: '0.72rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>نعم، احذف</button>
-              <button onClick={() => setDeleteId(null)} style={{ flex: 1, background: 'rgba(29,29,31,0.06)', color: '#1D1D1F', border: 'none', borderRadius: 10, padding: '0.72rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>إلغاء</button>
+              <button onClick={() => setDeleteId(null)} style={{ flex: 1, background: 'rgba(29,29,31,0.06)', color: '#FFFFFF', border: 'none', borderRadius: 10, padding: '0.72rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>إلغاء</button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Scanner Modal ── */}
+      {showScanner && (
+        <ImeiScanner
+          onClose={() => setShowScanner(false)}
+          onScanSuccess={handleScan}
+        />
       )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>

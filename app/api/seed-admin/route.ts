@@ -15,16 +15,15 @@ export async function GET() {
     
     const admin = await User.create({
       name: 'Admin Almaz',
-      email: 'admin@almazstore.com',
       username: 'admin_almaz',
       password: hashedPassword,
-      role: 'مدير',
+      role: 'Admin',
     })
 
     return NextResponse.json({
       success: true,
       message: 'Admin seeded successfully. All legacy users dropped.',
-      admin: { username: admin.username, role: admin.role, name: admin.name }
+      admin: { username: (admin as any).username, role: (admin as any).role, name: (admin as any).name }
     })
   } catch (error) {
     console.error('[Seed API] Error:', error)
